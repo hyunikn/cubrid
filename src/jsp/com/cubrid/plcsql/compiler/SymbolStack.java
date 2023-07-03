@@ -127,6 +127,82 @@ public class SymbolStack {
             }
 
             // add procedures
+            DeclFunc df;
+            df = new DeclFunc(null, "TRIM",
+                              new NodeList<DeclParam>()
+                                .addNode(new DeclParamIn(null, "str", TypeSpecSimple.STRING)),
+                              TypeSpecSimple.STRING);
+            putDeclTo(predefinedSymbols, "TRIM", df);
+
+            df = new DeclFunc(null, "LENGTHB",
+                              new NodeList<DeclParam>()
+                                .addNode(new DeclParamIn(null, "str", TypeSpecSimple.STRING)),
+                              TypeSpecSimple.INT);
+            putDeclTo(predefinedSymbols, "LENGTHB", df);
+
+            df = new DeclFunc(null, "LENGTH",
+                              new NodeList<DeclParam>()
+                                .addNode(new DeclParamIn(null, "str", TypeSpecSimple.STRING)),
+                              TypeSpecSimple.INT);
+            putDeclTo(predefinedSymbols, "LENGTH", df);
+
+            df = new DeclFunc(null, "SUBSTR",
+                              new NodeList<DeclParam>()
+                                .addNode(new DeclParamIn(null, "str", TypeSpecSimple.STRING))
+                                .addNode(new DeclParamIn(null, "start", TypeSpecSimple.INT))
+                                .addNode(new DeclParamIn(null, "length", TypeSpecSimple.INT)),
+                              TypeSpecSimple.STRING);
+            putDeclTo(predefinedSymbols, "SUBSTR", df);
+            df = new DeclFunc(null, "SUBSTR_S",
+                              new NodeList<DeclParam>()
+                                .addNode(new DeclParamIn(null, "str", TypeSpecSimple.STRING))
+                                .addNode(new DeclParamIn(null, "start", TypeSpecSimple.INT)),
+                              TypeSpecSimple.STRING);
+            putDeclTo(predefinedSymbols, "SUBSTR_S", df);
+
+            df = new DeclFunc(null, "SUBSTRB",
+                              new NodeList<DeclParam>()
+                                .addNode(new DeclParamIn(null, "str", TypeSpecSimple.STRING))
+                                .addNode(new DeclParamIn(null, "start", TypeSpecSimple.INT))
+                                .addNode(new DeclParamIn(null, "length", TypeSpecSimple.INT)),
+                              TypeSpecSimple.STRING);
+            putDeclTo(predefinedSymbols, "SUBSTRB", df);
+
+            df = new DeclFunc(null, "NVL",
+                              new NodeList<DeclParam>()
+                                .addNode(new DeclParamIn(null, "left", TypeSpecSimple.INT))
+                                .addNode(new DeclParamIn(null, "right", TypeSpecSimple.INT)),
+                              TypeSpecSimple.INT);
+            putDeclTo(predefinedSymbols, "NVL", df);
+
+            df = new DeclFunc(null, "INSTR",
+                              new NodeList<DeclParam>()
+                                .addNode(new DeclParamIn(null, "str", TypeSpecSimple.STRING))
+                                .addNode(new DeclParamIn(null, "substr", TypeSpecSimple.STRING)),
+                              TypeSpecSimple.INT);
+            putDeclTo(predefinedSymbols, "INSTR", df);
+
+            df = new DeclFunc(null, "INSTRB",
+                              new NodeList<DeclParam>()
+                                .addNode(new DeclParamIn(null, "str", TypeSpecSimple.STRING))
+                                .addNode(new DeclParamIn(null, "substr", TypeSpecSimple.STRING)),
+                              TypeSpecSimple.INT);
+            putDeclTo(predefinedSymbols, "INSTRB", df);
+
+            df = new DeclFunc(null, "CHR",
+                              new NodeList<DeclParam>()
+                                .addNode(new DeclParamIn(null, "n", TypeSpecSimple.INT)),
+                              TypeSpecSimple.STRING);
+            putDeclTo(predefinedSymbols, "CHR", df);
+
+            df = new DeclFunc(null, "TO_CHAR",
+                              new NodeList<DeclParam>()
+                                .addNode(new DeclParamIn(null, "date", TypeSpecSimple.DATE))
+                                .addNode(new DeclParamIn(null, "fmt", TypeSpecSimple.STRING)),
+                              TypeSpecSimple.STRING);
+            putDeclTo(predefinedSymbols, "TO_CHAR", df);
+
+            // add procedures
             DeclProc dp;
 
             dp = new DeclProc(null, "DBMS_OUTPUT$DISABLE", new NodeList<DeclParam>());

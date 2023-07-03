@@ -62,19 +62,24 @@ public class PlcsqlCompilerMain {
         // System.out.println("[TEMP] text to the compiler");
         // System.out.println(in);
 
+        String header = in.substring(0, in.indexOf('('));
+        header = header.trim();
+        String[] words = header.split(" ");
+        String routine = words.length > 0 ? words[words.length - 1] : "???";
+
         int optionFlags = verbose ? OPT_VERBOSE : 0;
         CharStream input = CharStreams.fromString(in);
         try {
             return compileInner(input, optionFlags, 0, null);
         } catch (SyntaxError e) {
-            CompileInfo err = new CompileInfo(-1, e.line, e.column, e.getMessage());
+            CompileInfo err = new CompileInfo(-1, e.line, e.column, routine + ": " + e.getMessage());
             return err;
         } catch (SemanticError e) {
-            CompileInfo err = new CompileInfo(-1, e.line, e.column, e.getMessage());
+            CompileInfo err = new CompileInfo(-1, e.line, e.column, routine + ": " + e.getMessage());
             return err;
         } catch (Throwable e) {
             Server.log(e);
-            CompileInfo err = new CompileInfo(-1, 0, 0, "internal error");
+            CompileInfo err = new CompileInfo(-1, 0, 0, routine + ": " + "internal error");
             return err;
         }
     }

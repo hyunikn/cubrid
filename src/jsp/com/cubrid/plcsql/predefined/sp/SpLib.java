@@ -53,6 +53,42 @@ import java.util.regex.PatternSyntaxException;
 
 public class SpLib {
 
+    // temporary for test
+    public static String TRIM(String str) {
+        return null;
+    }
+    public static Integer LENGTHB(String str) {
+        return null;
+    }
+    public static Integer LENGTH(String str) {
+        return null;
+    }
+    public static String SUBSTR(String str, Integer start, Integer length) {
+        return null;
+    }
+    public static String SUBSTR_S(String str, Integer start) {
+        return null;
+    }
+    public static String SUBSTRB(String str, Integer start, Integer length) {
+        return null;
+    }
+    public static Integer NVL(Integer left, Integer right) {
+        return null;
+    }
+    public static Integer INSTR(String str, String substr) {
+        return null;
+    }
+    public static Integer INSTRB(String str, String substr) {
+        return null;
+    }
+    public static String CHR(Integer n) {
+        return null;
+    }
+    public static String TO_CHAR(Date date, String fmt) {
+        return null;
+    }
+    // end of temporary
+
     // builtin exceptions
     public static class CASE_NOT_FOUND extends PlcsqlRuntimeError {
         public CASE_NOT_FOUND() {

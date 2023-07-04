@@ -2420,11 +2420,43 @@ public class ParseTreeConverter extends PcsParserBaseVisitor<AstNode> {
             // convert select list
             selectList = new LinkedHashMap<>();
             for (ColumnInfo ci : sws.selectList) {
-                String sqlType = getSqlTypeNameFromCode(ci.type);
-
                 String col = Misc.getNormalizedText(ci.colName);
-                TypeSpec typeSpec = typeSpecs.get(sqlType);
-                assert typeSpec != null;
+
+                TypeSpec typeSpec;
+                if (ci.type == DBType.DB_VARIABLE) {
+                    ExprId id = visitNonFuncIdentifier(col, ctx);
+                    if (id == null) {
+                        throw new SemanticError(
+                                Misc.getLineColumnOf(ctx), // s422
+                                "cannot figure out the type of " + ci.colName);
+                    } else {
+                        DeclId decl = id.decl;
+                        if (decl instanceof DeclIdTyped) {
+                            typeSpec = ((DeclIdTyped) decl).typeSpec();
+                        } else if (decl instanceof DeclForIter) {
+                            typeSpec = TypeSpecSimple.INT;
+                        } else if (decl instanceof DeclForRecord) {
+                            throw new SemanticError(
+                                    Misc.getLineColumnOf(ctx), // s423
+                                    "for-loop iterator record " + id.name + " cannot be in a select list");
+                        } else if (decl instanceof DeclCursor) {
+                            throw new SemanticError(
+                                    Misc.getLineColumnOf(ctx), // s424
+                                    "cursor " + id.name + " cannot be in a select list");
+                        } else {
+                            throw new RuntimeException("unreachable");
+                        }
+                    }
+                } else if (isSupportedDbType(ci.type)) {
+                    String sqlType = getSqlTypeNameFromCode(ci.type);
+                    typeSpec = typeSpecs.get(sqlType);
+                    assert typeSpec != null : String.format("no matching type spec for %s (%d)", sqlType, ci.type);
+                } else {
+                    throw new SemanticError(
+                            Misc.getLineColumnOf(ctx), // s425
+                            "cannot figure out the type of " + ci.colName);
+                }
+
                 selectList.put(col, typeSpec);
             }
 

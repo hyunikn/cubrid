@@ -1447,8 +1447,9 @@ $ LOADDB
 1361 파일 "%1$s"을(를) 찾을 수 없습니다.
 
 1362 In line %1$d, column %2$d\nStored procedure compile error: %3$s
+1363 length of CREATE PROCEDURE/FUNCTION statements may not exceed %1$d bytes
 
-1363 마지막 에러
+1364 마지막 에러
 
 $set 6 MSGCAT_SET_INTERNAL
 1 에러 서브 시스템에 에러 발생(라인 %1$d):

@@ -1447,8 +1447,9 @@ Controllare il percorso del file della chiave (_keys) e assicurarsi che includa 
 1361 Il file "%1$s" non è stato trovato.
 
 1362 In line %1$d, column %2$d\nStored procedure compile error: %3$s
+1363 length of CREATE PROCEDURE/FUNCTION statements may not exceed %1$d bytes
 
-1363 Ultimo errore
+1364 Ultimo errore
 
 $set 6 MSGCAT_SET_INTERNAL
 1 Errore nel sottosistema di errore (linea %1$d):

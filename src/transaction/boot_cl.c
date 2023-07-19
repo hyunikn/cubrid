@@ -3132,6 +3132,12 @@ boot_define_stored_procedure (MOP class_mop)
       return error_code;
     }
 
+  error_code = smt_add_attribute (def, "pl_code", "varchar(1000000)", NULL);
+  if (error_code != NO_ERROR)
+    {
+      return error_code;
+    }
+
   error_code = smt_add_attribute (def, "target", "varchar(4096)", NULL);
   if (error_code != NO_ERROR)
     {
@@ -6282,7 +6288,7 @@ boot_define_view_stored_procedure (void)
 	    "ELSE (SELECT [t].[type_name] FROM [%s] AS [t] WHERE [sp].[return_type] = [t].[type_id]) "
 	    "END AS [return_type], "
 	  "[sp].[arg_count] AS [arg_count], "
-	  "CASE [sp].[lang] WHEN 1 THEN 'JAVA' ELSE '' END AS [lang], "
+	  "CASE [sp].[lang] WHEN 0 THEN 'PL/CSQL' WHEN 1 THEN 'JAVA' ELSE '' END AS [lang], "
 	  "[sp].[target] AS [target], "
 	  "CAST ([sp].[owner].[name] AS VARCHAR(255)) AS [owner], " /* string -> varchar(255) */
 	  "[sp].[comment] AS [comment] "

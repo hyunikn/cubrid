@@ -44,6 +44,7 @@
 #define SP_ATTR_ARG_COUNT       "arg_count"
 #define SP_ATTR_LANG            "lang"
 #define SP_ATTR_TARGET          "target"
+#define SP_ATTR_PL_CODE         "pl_code"
 #define SP_ATTR_OWNER           "owner"
 #define SP_ATTR_COMMENT         "comment"
 

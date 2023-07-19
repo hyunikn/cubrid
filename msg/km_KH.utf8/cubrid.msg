@@ -1447,8 +1447,9 @@ Check the path of the key file (_keys) and make sure that it includes proper key
 1361 File "%1$s" was not found.
 
 1362 In line %1$d, column %2$d\nStored procedure compile error: %3$s
+1363 length of CREATE PROCEDURE/FUNCTION statements may not exceed %1$d bytes
 
-1363 Last Error
+1364 Last Error
 
 $set 6 MSGCAT_SET_INTERNAL
 1 Error in error subsystem (line %1$d):

@@ -1447,8 +1447,9 @@ $ LOADDB
 1361 ファイル "%1$s" が見つかりませんでした。
 
 1362 In line %1$d, column %2$d\nStored procedure compile error: %3$s
+1363 length of CREATE PROCEDURE/FUNCTION statements may not exceed %1$d bytes
 
-1363 ラストエラー
+1364 ラストエラー
 
 $set 6 MSGCAT_SET_INTERNAL
 1 エラーサブシステムにエラー発生(ライン %1$d):

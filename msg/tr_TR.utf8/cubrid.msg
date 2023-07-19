@@ -1447,8 +1447,9 @@ Anahtar dosyasının (_keys) yolunu kontrol edin ve uygun anahtarı içerdiğind
 1361 "%1$s" dosyası bulunamadı.
 
 1362 In line %1$d, column %2$d\nStored procedure compile error: %3$s
+1363 length of CREATE PROCEDURE/FUNCTION statements may not exceed %1$d bytes
 
-1363 Son Hata
+1364 Son Hata
 
 $set 6 MSGCAT_SET_INTERNAL
 1 Alt Hata içinde hata (satır %1$d):

@@ -93,7 +93,10 @@
 #define SAVEPOINT_ADD_STORED_PROC "ADDSTOREDPROC"
 #define SAVEPOINT_CREATE_STORED_PROC "CREATESTOREDPROC"
 
-#define MAX_ARG_COUNT 64
+#define MAX_ARG_COUNT   (64)
+/* the following value must match the length of the pl_code attribute defined in
+ * boot_define_stored_procedure() in transaction/boot_cl.c */
+#define MAX_PL_CODE_LEN (1000000)
 
 static int server_port = -1;
 static int call_cnt = 0;
@@ -107,7 +110,8 @@ static int jsp_add_stored_procedure_argument (MOP * mop_p, const char *sp_name, 
 					      PT_TYPE_ENUM data_type, PT_MISC_TYPE mode, const char *arg_comment);
 static char *jsp_check_stored_procedure_name (const char *str);
 static int jsp_add_stored_procedure (const char *name, const PT_MISC_TYPE type, const PT_TYPE_ENUM ret_type,
-				     PT_NODE * param_list, const char *java_method, const char *comment);
+				     PT_NODE * param_list, const int lang, const char *java_method,
+                                     const char * pl_code, const char *comment);
 static int drop_stored_procedure (const char *name, PT_MISC_TYPE expected_type);
 
 static int jsp_make_method_sig_list (PARSER_CONTEXT * parser, PT_NODE * node_list, method_sig_list & sig_list);
@@ -547,6 +551,7 @@ int
 jsp_create_stored_procedure (PARSER_CONTEXT * parser, PT_NODE * statement)
 {
   const char *name, *decl, *comment = NULL;
+  char* pl_code_str = NULL;;
 
   PT_MISC_TYPE type;
   PT_NODE *param_list, *p;
@@ -593,11 +598,18 @@ jsp_create_stored_procedure (PARSER_CONTEXT * parser, PT_NODE * statement)
   lang = PT_NODE_SP_LANG (statement);
   if (lang == SP_LANG_PLCSQL)
     {
+      if (statement->sql_user_text_len > MAX_PL_CODE_LEN)
+        {
+          er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, ER_SP_PL_CODE_TOO_BIG, 1, MAX_PL_CODE_LEN);
+          goto error_exit;
+        }
+
       std::string pl_code (statement->sql_user_text, statement->sql_user_text_len);
       err = plcsql_transfer_file (pl_code, false, compile_info);
       if (err == NO_ERROR && compile_info.err_code == NO_ERROR)
 	{
 	  decl = compile_info.java_signature.c_str ();
+          pl_code_str = strdup(pl_code.c_str());
 	}
       else
 	{
@@ -642,7 +654,7 @@ jsp_create_stored_procedure (PARSER_CONTEXT * parser, PT_NODE * statement)
   /* check already exists */
   if (jsp_is_exist_stored_procedure (name))
     {
-      if (statement->info.sp.or_replace)
+      if (statement->info.sp.or_replace)        // TODO: check this before plcsql_transfer_file()
 	{
 	  /* drop existing stored procedure */
 	  err = tran_system_savepoint (SAVEPOINT_CREATE_STORED_PROC);
@@ -667,11 +679,16 @@ jsp_create_stored_procedure (PARSER_CONTEXT * parser, PT_NODE * statement)
 
   comment = (char *) PT_NODE_SP_COMMENT (statement);
 
-  err = jsp_add_stored_procedure (name, type, ret_type, param_list, decl, comment);
+  err = jsp_add_stored_procedure (name, type, ret_type, param_list, lang, decl, pl_code_str, comment);
   if (err != NO_ERROR)
     {
       goto error_exit;
     }
+
+  if (pl_code_str) {
+      free(pl_code_str);
+  }
+
   return NO_ERROR;
 
 error_exit:
@@ -679,6 +696,11 @@ error_exit:
     {
       tran_abort_upto_system_savepoint (SAVEPOINT_CREATE_STORED_PROC);
     }
+
+  if (pl_code_str) {
+      free(pl_code_str);
+  }
+
   return (er_errid () != NO_ERROR) ? er_errid () : ER_FAILED;
 }
 
@@ -1014,7 +1036,8 @@ jsp_check_stored_procedure_name (const char *str)
 
 static int
 jsp_add_stored_procedure (const char *name, const PT_MISC_TYPE type, const PT_TYPE_ENUM return_type,
-			  PT_NODE * param_list, const char *java_method, const char *comment)
+			  PT_NODE * param_list, const int lang, const char *java_method,
+                          const char * pl_code, const char *comment)
 {
   DB_OBJECT *classobj_p, *object_p;
   DB_OTMPL *obt_p = NULL;
@@ -1149,7 +1172,7 @@ jsp_add_stored_procedure (const char *name, const PT_MISC_TYPE type, const PT_TY
       goto error;
     }
 
-  db_make_int (&value, SP_LANG_JAVA);
+  db_make_int (&value, lang);
   err = dbt_put_internal (obt_p, SP_ATTR_LANG, &value);
   if (err != NO_ERROR)
     {
@@ -1158,6 +1181,14 @@ jsp_add_stored_procedure (const char *name, const PT_MISC_TYPE type, const PT_TY
 
   db_make_string (&value, java_method);
   err = dbt_put_internal (obt_p, SP_ATTR_TARGET, &value);
+  pr_clear_value (&value);
+  if (err != NO_ERROR)
+    {
+      goto error;
+    }
+
+  db_make_string (&value, pl_code);
+  err = dbt_put_internal (obt_p, SP_ATTR_PL_CODE, &value);
   pr_clear_value (&value);
   if (err != NO_ERROR)
     {

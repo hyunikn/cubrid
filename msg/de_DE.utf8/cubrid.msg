@@ -1447,8 +1447,9 @@ $ LOADDB
 1361 Datei "%1$s" wurde nicht gefunden.
 
 1362 In line %1$d, column %2$d\nStored procedure compile error: %3$s
+1363 length of CREATE PROCEDURE/FUNCTION statements may not exceed %1$d bytes
 
-1363 Letzter Fehler
+1364 Letzter Fehler
 
 $set 6 MSGCAT_SET_INTERNAL
 1 Fehler in Fehler-Subsystem (Zeile %1$d):

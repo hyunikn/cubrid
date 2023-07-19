@@ -1447,8 +1447,9 @@ Verificați calea fișierului cheie (_keys) și asigurați-vă că acesta includ
 1361 Fișierul "%1$s" nu a fost găsit.
 
 1362 In line %1$d, column %2$d\nStored procedure compile error: %3$s
+1363 length of CREATE PROCEDURE/FUNCTION statements may not exceed %1$d bytes
 
-1363 Ultima eroare
+1364 Ultima eroare
 
 $set 6 MSGCAT_SET_INTERNAL
 1 Eroare în subsistemul de erori (linia %1$d):

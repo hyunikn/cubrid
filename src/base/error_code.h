@@ -1741,8 +1741,9 @@
 #define ER_FILE_NOT_FOUND                           -1361
 
 #define ER_SP_COMPILE_ERROR                         -1362
+#define ER_SP_PL_CODE_TOO_BIG                       -1363
 
-#define ER_LAST_ERROR                               -1363
+#define ER_LAST_ERROR                               -1364
 
 /*
  * CAUTION!

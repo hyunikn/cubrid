@@ -7480,6 +7480,35 @@ pt_make_query_show_create_view (PARSER_CONTEXT * parser, PT_NODE * view_identifi
 }
 
 PT_NODE *
+pt_make_query_show_create_routine (PARSER_CONTEXT * parser, PT_NODE * routine_name)
+{
+  PT_NODE **node = NULL;
+  PT_NODE *show_node;
+
+#define QUERY_FMT ("SELECT [spc].[pl_code] from [db_stored_procedure_code] as [spc] where [spc].[sp_name] = '%s';")
+  char query_buffer[sizeof(QUERY_FMT) + 254];   // TODO: replace 254
+  sprintf(query_buffer, QUERY_FMT, routine_name->info.name.original);
+#undef QUERY_FMT
+
+  /* parser ';' will empty and reset the stack of parser, this make the status machine be right for the next statement,
+   * and avoid nested parser statement. */
+  parser_parse_string (parser, ";");
+
+  node = parser_parse_string_use_sys_charset (parser, query_buffer);
+  if (node == NULL)
+    {
+      return NULL;
+    }
+
+  parser->flag.dont_collect_exec_stats = 1;
+
+  show_node = pt_pop (parser);
+  assert (show_node == node[0]);
+
+  return node[0];
+}
+
+PT_NODE *
 pt_make_query_show_exec_stats (PARSER_CONTEXT * parser)
 {
   PT_NODE **node = NULL;

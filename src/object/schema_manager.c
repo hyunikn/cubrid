@@ -210,6 +210,7 @@ static SYSTEM_CLASS_DEF system_classes[] = {
   {CTV_PARTITION_NAME, strlen (CTV_PARTITION_NAME)},		// "db_partition"
   {CTV_STORED_PROC_NAME, strlen (CTV_STORED_PROC_NAME)},	// "db_stored_procedure"
   {CTV_STORED_PROC_ARGS_NAME, strlen (CTV_STORED_PROC_ARGS_NAME)},	// "db_stored_procedure_args"
+  {CTV_STORED_PROC_CODE_NAME, strlen (CTV_STORED_PROC_CODE_NAME)},	// "db_stored_procedure_code"
   {CTV_DB_COLLATION_NAME, strlen (CTV_DB_COLLATION_NAME)},	// "db_collation"
   {CTV_DB_CHARSET_NAME, strlen (CTV_DB_CHARSET_NAME)},		// "db_charset"
   {CTV_DB_SERVER_NAME, strlen (CTV_DB_SERVER_NAME)},		// "db_server"
@@ -3094,6 +3095,7 @@ sm_mark_system_class_for_catalog (void)
     CTV_TRIGGER_NAME,
     CTV_STORED_PROC_NAME,
     CTV_STORED_PROC_ARGS_NAME,
+    CTV_STORED_PROC_CODE_NAME,
     CTV_PARTITION_NAME,
     CT_COLLATION_NAME,
     CT_DB_SERVER_NAME,

@@ -603,6 +603,7 @@ extern "C"
   extern PT_NODE *pt_make_query_describe_w_identifier (PARSER_CONTEXT * parser, PT_NODE * original_cls_id,
 						       PT_NODE * att_id);
   extern PT_NODE *pt_make_query_show_index (PARSER_CONTEXT * parser, PT_NODE * original_cls_id);
+  extern PT_NODE *pt_make_query_show_create_routine(PARSER_CONTEXT * parser, PT_NODE * routine_name);
   extern PT_NODE *pt_make_query_show_exec_stats (PARSER_CONTEXT * parser);
   extern PT_NODE *pt_make_query_show_exec_stats_all (PARSER_CONTEXT * parser);
   extern PT_NODE *parser_make_expression (PARSER_CONTEXT * parser, PT_OP_TYPE OP, PT_NODE * arg1, PT_NODE * arg2,

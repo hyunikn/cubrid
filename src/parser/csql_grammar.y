@@ -7469,6 +7469,18 @@ show_stmt
 		DBG_PRINT}}
 	| SHOW
 	  CREATE
+	  ROUTINE
+	  identifier
+		{{ DBG_TRACE_GRAMMAR(show_stmt, | SHOW CREATE ROUTINE identifier);
+
+			PT_NODE *node = pt_make_query_show_create_routine (this_parser, $4);
+
+			$$ = node;
+			PARSER_SAVE_ERR_CONTEXT ($$, @$.buffer_pos)
+
+		DBG_PRINT}}
+	| SHOW
+	  CREATE
 	  TABLE
 	  class_name
 		{{ DBG_TRACE_GRAMMAR(show_stmt, | SHOW CREATE TABLE class_name);

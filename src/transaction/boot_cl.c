@@ -6404,6 +6404,77 @@ boot_define_view_stored_procedure_arguments (void)
 }
 
 /*
+ * boot_define_view_stored_procedure_arguments :
+ *
+ * returns : NO_ERROR if all OK, ER_ status otherwise
+ */
+static int
+boot_define_view_stored_procedure_code (void)
+{
+  MOP class_mop;
+  COLUMN columns[] = {
+    {"sp_name", "varchar(255)"},
+    {"pl_code", "varchar(1000000)"}
+  };
+  int num_cols = sizeof (columns) / sizeof (columns[0]);
+  int i;
+  char stmt[2048];
+  int error_code = NO_ERROR;
+
+  class_mop = db_create_vclass (CTV_STORED_PROC_CODE_NAME);
+  if (class_mop == NULL)
+    {
+      assert (er_errid () != NO_ERROR);
+      error_code = er_errid ();
+      return error_code;
+    }
+
+  for (i = 0; i < num_cols; i++)
+    {
+      error_code = db_add_attribute (class_mop, columns[i].name, columns[i].type, NULL);
+      if (error_code != NO_ERROR)
+	{
+	  return error_code;
+	}
+    }
+
+  // *INDENT-OFF*
+  sprintf (stmt,
+	"SELECT "
+	  "[sp].[sp_name] AS [sp_name], "
+	  "[sp].[pl_code] AS [pl_code] "
+	"FROM "
+	  /* CT_STORED_PROC_ARGS_NAME */
+	  "[%s] AS [sp] "
+        "WHERE "
+          "[sp].[lang] = 0 "    /* PL/CSQL */
+	"ORDER BY " /* Is it possible to remove ORDER BY? */
+	  "[sp].[sp_name]",
+	CT_STORED_PROC_NAME);
+  // *INDENT-ON*
+
+  error_code = db_add_query_spec (class_mop, stmt);
+  if (error_code != NO_ERROR)
+    {
+      return error_code;
+    }
+
+  error_code = au_change_owner (class_mop, Au_dba_user);
+  if (error_code != NO_ERROR)
+    {
+      return error_code;
+    }
+
+  error_code = au_grant (Au_public_user, class_mop, AU_SELECT, false);
+  if (error_code != NO_ERROR)
+    {
+      return error_code;
+    }
+
+  return NO_ERROR;
+}
+
+/*
  * boot_define_view_db_collation :
  *
  * returns : NO_ERROR if all OK, ER_ status otherwise
@@ -6826,6 +6897,7 @@ catcls_vclass_install (void)
     {boot_define_view_partition}, /* CTV_PARTITION_NAME */
     {boot_define_view_stored_procedure}, /* CTV_STORED_PROC_NAME */
     {boot_define_view_stored_procedure_arguments}, /* CTV_STORED_PROC_ARGS_NAME */
+    {boot_define_view_stored_procedure_code}, /* CTV_STORED_PROC_CODE_NAME */
     {boot_define_view_db_collation}, /* CTV_DB_COLLATION_NAME */
     {boot_define_view_db_charset}, /* CTV_DB_CHARSET_NAME */
     {boot_define_view_db_server}, /* CTV_DB_SERVER_NAME */
@@ -6970,6 +7042,7 @@ boot_destroy_catalog_classes (void)
     CTV_PARTITION_NAME,
     CTV_STORED_PROC_NAME,
     CTV_STORED_PROC_ARGS_NAME,
+    CTV_STORED_PROC_CODE_NAME,
     CT_COLLATION_NAME,
     CT_DB_SERVER_NAME,
     CTV_DB_SERVER_NAME,

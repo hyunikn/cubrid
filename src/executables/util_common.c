@@ -132,6 +132,7 @@ static SYSTEM_CLASS_DEF system_classes[] = {
   {"db_partition", strlen ("db_partition")},				// CTV_PARTITION_NAME
   {"db_stored_procedure", strlen ("db_stored_procedure")},		// CTV_STORED_PROC_NAME
   {"db_stored_procedure_args", strlen ("db_stored_procedure_args")},	// CTV_STORED_PROC_ARGS_NAME
+  {"db_stored_procedure_code", strlen ("db_stored_procedure_code")},	// CTV_STORED_PROC_CODE_NAME
   {"db_collation", strlen ("db_collation")},				// CTV_DB_COLLATION_NAME
   {"db_charset", strlen ("db_charset")},				// CTV_DB_CHARSET_NAME
   {"db_server", strlen ("db_server")},					// CTV_DB_SERVER_NAME

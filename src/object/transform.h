@@ -162,6 +162,7 @@ typedef struct tf_ct_class
 #define CTV_TRIGGER_NAME           "db_trig"
 #define CTV_STORED_PROC_NAME       "db_stored_procedure"
 #define CTV_STORED_PROC_ARGS_NAME  "db_stored_procedure_args"
+#define CTV_STORED_PROC_CODE_NAME  "db_stored_procedure_code"
 #define CTV_PARTITION_NAME         "db_partition"
 #define CTV_DB_COLLATION_NAME      "db_collation"
 #define CTV_DB_CHARSET_NAME	   "db_charset"

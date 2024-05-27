@@ -447,32 +447,68 @@ public class SpLib {
     // DBMS_OUTPUT procedures
 
     public static void DBMS_OUTPUT$DISABLE() {
+        /* no operation
         DBMS_OUTPUT.disable();
+         */
     }
 
     public static void DBMS_OUTPUT$ENABLE(Integer size) {
+        /* no operation
         if (size == null) {
             throw new VALUE_ERROR("size must be non-null");
         }
         DBMS_OUTPUT.enable(size);
+         */
     }
 
     public static void DBMS_OUTPUT$GET_LINE(String[] line, Integer[] status) {
+        /* no operation
         int[] iArr = new int[0];
         DBMS_OUTPUT.getLine(line, iArr);
         status[0] = iArr[0];
+         */
     }
 
     public static void DBMS_OUTPUT$NEW_LINE() {
+        /* no operation
         DBMS_OUTPUT.newLine();
+         */
     }
 
+    private static class Log extends RuntimeException {
+        public Log(String msg) {
+            super(msg);
+        }
+    }
+
+    private static StackTraceElement[] EMPTY_TRACE = new StackTraceElement[0];
+
     public static void DBMS_OUTPUT$PUT_LINE(String s) {
+        /*
         DBMS_OUTPUT.putLine(s);
+         */
+        String flag = System.getenv("SKIP_DBMS_OUTPUT");
+        if ("yes".equalsIgnoreCase(flag) || "true".equalsIgnoreCase(flag)) {
+            // skip
+        } else {
+            Throwable t = new Log(s + '\n');
+            t.setStackTrace(EMPTY_TRACE);
+            Server.log(t);
+        }
     }
 
     public static void DBMS_OUTPUT$PUT(String s) {
+        /*
         DBMS_OUTPUT.put(s);
+         */
+        String flag = System.getenv("SKIP_DBMS_OUTPUT");
+        if ("yes".equalsIgnoreCase(flag) || "true".equalsIgnoreCase(flag)) {
+            // skip
+        } else {
+            Throwable t = new Log(s);
+            t.setStackTrace(EMPTY_TRACE);
+            Server.log(t);
+        }
     }
 
     // --------------------------------------------------------

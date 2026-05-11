@@ -81,6 +81,11 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         this.sqlSerialNo = 1;
     }
 
+    public Unit convertPackageSpecAndBody(ParseTree specTree, ParseTree bodyTree) {
+        // TODO package
+        return null;
+    }
+
     public void askServerSemanticQuestions() {
         if (semanticQuestions.size() == 0) {
             return; // nothing to do
@@ -239,8 +244,8 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
     @Override
     public Unit visitCreate_routine(Create_routineContext ctx) {
-        previsitRoutine_definition(ctx.routine_definition(), null);
-        DeclRoutine decl = visitRoutine_definition(ctx.routine_definition());
+        previsitRoutine_def(ctx.routine_def(), null);
+        DeclRoutine decl = visitRoutine_def(ctx.routine_def());
         return new Unit(ctx, autonomousTransaction, connectionRequired, decl, spRevision);
     }
 
@@ -1298,7 +1303,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
     }
 
     @Override
-    public AstNode visitPragma_declaration(Pragma_declarationContext ctx) {
+    public AstNode visitPragma_decl(Pragma_declContext ctx) {
         assert ctx.AUTONOMOUS_TRANSACTION() != null; // by syntax
 
         // currently, only the Autonomous Transaction is
@@ -1320,7 +1325,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
     }
 
     @Override
-    public AstNode visitConstant_declaration(Constant_declarationContext ctx) {
+    public AstNode visitConstant_def(Constant_defContext ctx) {
 
         String name = Misc.getNormalizedText(ctx.identifier());
 
@@ -1336,7 +1341,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
     }
 
     @Override
-    public AstNode visitException_declaration(Exception_declarationContext ctx) {
+    public AstNode visitException_decl(Exception_declContext ctx) {
 
         String name = Misc.getNormalizedText(ctx.identifier());
 
@@ -1349,7 +1354,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
     }
 
     @Override
-    public AstNode visitVariable_declaration(Variable_declarationContext ctx) {
+    public AstNode visitVariable_def(Variable_defContext ctx) {
 
         String name = Misc.getNormalizedText(ctx.identifier());
 
@@ -1365,7 +1370,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
     }
 
     @Override
-    public AstNode visitCursor_definition(Cursor_definitionContext ctx) {
+    public AstNode visitCursor_def(Cursor_defContext ctx) {
 
         connectionRequired = true;
 
@@ -1396,7 +1401,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
     }
 
     @Override
-    public DeclRoutine visitRoutine_definition(Routine_definitionContext ctx) {
+    public DeclRoutine visitRoutine_def(Routine_defContext ctx) {
 
         routineDefNestLevel++;
         try {
@@ -1408,7 +1413,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                         lineColumn[1],
                         "illegal keywords LANGUAGE PLCSQL for a local procedure/function");
             }
-            String name = Misc.getNormalizedText(ctx.routine_uniq_name().name);
+            String name = Misc.getNormalizedText(ctx.uniq_name().name);
             boolean isFunction = (ctx.PROCEDURE() == null);
 
             DeclRoutine ret =
@@ -1800,7 +1805,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
         symbolStack.pushSymbolTable("loop", null);
 
-        DeclLabel declLabel = visitLabel_declaration(ctx.label_declaration());
+        DeclLabel declLabel = visitLabel_decl(ctx.label_decl());
         if (declLabel != null) {
             symbolStack.putDeclLabel(declLabel.name, declLabel);
         }
@@ -1820,7 +1825,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
     }
 
     @Override
-    public DeclLabel visitLabel_declaration(Label_declarationContext ctx) {
+    public DeclLabel visitLabel_decl(Label_declContext ctx) {
 
         if (ctx == null) {
             return null;
@@ -1841,7 +1846,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
         symbolStack.pushSymbolTable("while", null);
 
-        DeclLabel declLabel = visitLabel_declaration(ctx.label_declaration());
+        DeclLabel declLabel = visitLabel_decl(ctx.label_decl());
         if (declLabel != null) {
             symbolStack.putDeclLabel(declLabel.name, declLabel);
         }
@@ -1886,7 +1891,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         DeclForIter iterDecl = new DeclForIter(ctx.iterator().index_name(), iter);
         symbolStack.putDecl(iter, iterDecl);
 
-        DeclLabel declLabel = visitLabel_declaration(ctx.label_declaration());
+        DeclLabel declLabel = visitLabel_decl(ctx.label_decl());
         if (declLabel != null) {
             symbolStack.putDeclLabel(declLabel.name, declLabel);
         }
@@ -1967,7 +1972,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         String record = Misc.getNormalizedText(ctx.for_cursor().record_name());
 
         String label;
-        DeclLabel declLabel = visitLabel_declaration(ctx.label_declaration());
+        DeclLabel declLabel = visitLabel_decl(ctx.label_decl());
         if (declLabel == null) {
             label = null;
         } else {
@@ -2043,7 +2048,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         StaticSql staticSql = checkAndConvertStaticSql(sws, selectCtx);
 
         String label;
-        DeclLabel declLabel = visitLabel_declaration(ctx.label_declaration());
+        DeclLabel declLabel = visitLabel_decl(ctx.label_decl());
         if (declLabel == null) {
             label = null;
         } else {
@@ -2764,7 +2769,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         }
     }
 
-    private void previsitConstant_declaration(Constant_declarationContext ctx) {
+    private void previsitConstant_def(Constant_defContext ctx) {
 
         previsiting = true;
 
@@ -2776,7 +2781,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         previsiting = false;
     }
 
-    private void previsitVariable_declaration(Variable_declarationContext ctx) {
+    private void previsitVariable_def(Variable_defContext ctx) {
 
         previsiting = true;
 
@@ -2788,7 +2793,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         previsiting = false;
     }
 
-    private void previsitCursor_definition(Cursor_definitionContext ctx) {
+    private void previsitCursor_def(Cursor_defContext ctx) {
 
         previsiting = true;
 
@@ -2811,8 +2816,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         previsiting = false;
     }
 
-    private void previsitRoutine_definition(
-            Routine_definitionContext ctx, Map<String, DeclRoutine> store) {
+    private void previsitRoutine_def(Routine_defContext ctx, Map<String, DeclRoutine> store) {
 
         int scopeLevel = symbolStack.getCurrentScope().level;
 
@@ -2826,7 +2830,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         previsiting = true;
         try {
 
-            String name = Misc.getNormalizedText(ctx.routine_uniq_name().name);
+            String name = Misc.getNormalizedText(ctx.uniq_name().name);
 
             if (scopeLevel > SymbolStack.LEVEL_MAIN) {
 
@@ -2842,9 +2846,9 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                             Misc.getLineColumnOf(ctx.LANGUAGE()), // s084
                             "illegal keyword AUTHID for a local procedure/function");
                 }
-                if (ctx.routine_uniq_name().owner != null) {
+                if (ctx.uniq_name().owner != null) {
                     throw new SemanticError(
-                            Misc.getLineColumnOf(ctx.routine_uniq_name().owner), // s085
+                            Misc.getLineColumnOf(ctx.uniq_name().owner), // s085
                             "owner specification is not allowed for local procedures/functions");
                 }
             } else {
@@ -2852,8 +2856,8 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                 // SP being defined
 
                 assert scopeLevel == SymbolStack.LEVEL_MAIN;
-                if (ctx.routine_uniq_name().owner != null) {
-                    String owner = Misc.getNormalizedText(ctx.routine_uniq_name().owner);
+                if (ctx.uniq_name().owner != null) {
+                    String owner = Misc.getNormalizedText(ctx.uniq_name().owner);
                     assert owner.equals(spOwner);
                 }
                 spName = name;
@@ -3407,19 +3411,19 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
             ParserRuleContext d;
 
-            d = ds.constant_declaration();
+            d = ds.constant_def();
             if (d != null) {
-                // case of constant_declaration
-                previsitConstant_declaration((Constant_declarationContext) d);
-            } else if ((d = ds.variable_declaration()) != null) {
-                // case of variable_declaration
-                previsitVariable_declaration((Variable_declarationContext) d);
-            } else if ((d = ds.cursor_definition()) != null) {
-                // case of variable_declaration
-                previsitCursor_definition((Cursor_definitionContext) d);
-            } else if ((d = ds.routine_definition()) != null) {
-                // case of routine_definition
-                previsitRoutine_definition((Routine_definitionContext) d, ret);
+                // case of constant_def
+                previsitConstant_def((Constant_defContext) d);
+            } else if ((d = ds.variable_def()) != null) {
+                // case of variable_def
+                previsitVariable_def((Variable_defContext) d);
+            } else if ((d = ds.cursor_def()) != null) {
+                // case of cursor_def
+                previsitCursor_def((Cursor_defContext) d);
+            } else if ((d = ds.routine_def()) != null) {
+                // case of routine_def
+                previsitRoutine_def((Routine_defContext) d, ret);
             }
         }
         symbolStack.popSymbolTable(); // pop the temporary symbol table

@@ -95,7 +95,6 @@ namespace cubpl
     vector <pkg_rec_type> rec_type;
 
     // only for sp
-    string create_stmt;
     string java_signature;
   };
 

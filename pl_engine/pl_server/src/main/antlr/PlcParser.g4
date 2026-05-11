@@ -32,18 +32,57 @@ options {
 
 sql_script
     : create_routine EOF
+    | create_package_spec EOF
+    | create_package_body EOF
+    ;
+
+create_package_spec
+    : CREATE (OR_REPLACE)? PACKAGE uniq_name (IS | AS) package_item+ END label_name? (SEMICOLON)?
+    ;
+
+create_package_body
+    : CREATE (OR_REPLACE)? PACKAGE BODY uniq_name (IS | AS) package_item+
+      (BEGIN seq_of_statements (EXCEPTION exception_handler+)?)?
+      END label_name? (SEMICOLON)?
+    ;
+
+package_item
+    : variable_def
+    | constant_def
+    | exception_decl
+    | cursor_decl
+    | cursor_def
+    | routine_decl
+    | routine_def
+    | record_type_def
+    ;
+
+record_type_def
+    : TYPE identifier IS RECORD LPAREN record_field_def (',' record_field_def)+ RPAREN (COMMENT CHAR_STRING)? SEMICOLON
+    ;
+
+record_field_def
+    : identifier type_spec
     ;
 
 create_routine
-    : CREATE (OR_REPLACE)? routine_definition (COMMENT CHAR_STRING)?
+    : CREATE (OR_REPLACE)? routine_def
     ;
 
-routine_definition
-    : (PROCEDURE | FUNCTION) routine_uniq_name ( (LPAREN parameter_list RPAREN)? | LPAREN RPAREN ) (RETURN type_spec)?
-      (authid_spec? deterministic_spec? | deterministic_spec authid_spec) (IS | AS) (LANGUAGE PLCSQL)? seq_of_declare_specs? body (SEMICOLON)?
+routine_decl
+    : (PROCEDURE | FUNCTION) uniq_name ( (LPAREN parameter_list RPAREN)? | LPAREN RPAREN ) (RETURN type_spec)?
+      (authid_spec? deterministic_spec? | deterministic_spec authid_spec)
+      (COMMENT CHAR_STRING)? SEMICOLON
     ;
 
-routine_uniq_name
+routine_def
+    : (PROCEDURE | FUNCTION) uniq_name ( (LPAREN parameter_list RPAREN)? | LPAREN RPAREN ) (RETURN type_spec)?
+      (authid_spec? deterministic_spec? | deterministic_spec authid_spec)
+      (IS | AS) (LANGUAGE PLCSQL)? seq_of_declare_specs? body
+      (COMMENT CHAR_STRING)? (SEMICOLON)?
+    ;
+
+uniq_name
     : (owner=identifier '.')? name=identifier
     | '[' (owner=identifier '.')? name=identifier ']'   /* rewritten query */
     ;
@@ -76,24 +115,29 @@ seq_of_declare_specs
     ;
 
 declare_spec
-    : pragma_declaration
-    | constant_declaration
-    | exception_declaration
-    | variable_declaration
-    | cursor_definition
-    | routine_definition
+    : pragma_decl
+    | constant_def
+    | exception_decl
+    | variable_def
+    | cursor_def
+    | routine_def
     ;
 
-variable_declaration
-    : identifier type_spec ((NOT NULL_)? default_value_part)? SEMICOLON
+variable_def
+    : identifier type_spec ((NOT NULL_)? default_value_part)? (COMMENT CHAR_STRING)? SEMICOLON
     ;
 
-constant_declaration
-    : identifier CONSTANT type_spec (NOT NULL_)? default_value_part SEMICOLON
+constant_def
+    : identifier CONSTANT type_spec (NOT NULL_)? default_value_part (COMMENT CHAR_STRING)? SEMICOLON
     ;
 
-cursor_definition
-    : CURSOR identifier ( (LPAREN cursor_parameter_list RPAREN)? | LPAREN RPAREN ) IS static_sql SEMICOLON
+cursor_decl
+    : CURSOR identifier ( (LPAREN cursor_parameter_list RPAREN)? | LPAREN RPAREN ) RETURN type_spec (COMMENT CHAR_STRING)? SEMICOLON
+    ;
+
+cursor_def
+    : CURSOR identifier ( (LPAREN cursor_parameter_list RPAREN)? | LPAREN RPAREN ) IS
+      static_sql (COMMENT CHAR_STRING)? SEMICOLON
     ;
 
 cursor_parameter_list
@@ -105,11 +149,11 @@ cursor_parameter
     : parameter_name IN? type_spec
     ;
 
-exception_declaration
-    : identifier EXCEPTION SEMICOLON
+exception_decl
+    : identifier EXCEPTION (COMMENT CHAR_STRING)? SEMICOLON
     ;
 
-pragma_declaration
+pragma_decl
     : PRAGMA AUTONOMOUS_TRANSACTION SEMICOLON
     ;
 
@@ -117,7 +161,7 @@ seq_of_statements
     : (statement SEMICOLON)+
     ;
 
-label_declaration
+label_decl
     : '<<' label_name '>>'
     ;
 
@@ -181,11 +225,11 @@ else_part
     ;
 
 loop_statement
-    : label_declaration? LOOP seq_of_statements END LOOP label_name?                       # stmt_basic_loop
-    | label_declaration? WHILE expression LOOP seq_of_statements END LOOP label_name?      # stmt_while_loop
-    | label_declaration? FOR iterator LOOP seq_of_statements END LOOP label_name?          # stmt_for_iter_loop
-    | label_declaration? FOR for_cursor LOOP seq_of_statements END LOOP label_name?        # stmt_for_cursor_loop
-    | label_declaration? FOR for_static_sql LOOP seq_of_statements END LOOP label_name?    # stmt_for_static_sql_loop
+    : label_decl? LOOP seq_of_statements END LOOP label_name?                       # stmt_basic_loop
+    | label_decl? WHILE expression LOOP seq_of_statements END LOOP label_name?      # stmt_while_loop
+    | label_decl? FOR iterator LOOP seq_of_statements END LOOP label_name?          # stmt_for_iter_loop
+    | label_decl? FOR for_cursor LOOP seq_of_statements END LOOP label_name?        # stmt_for_cursor_loop
+    | label_decl? FOR for_static_sql LOOP seq_of_statements END LOOP label_name?    # stmt_for_static_sql_loop
     ;
 
  // actually far more complicated according to the Spec.

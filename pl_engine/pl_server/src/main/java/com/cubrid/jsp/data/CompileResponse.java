@@ -59,7 +59,6 @@ public class CompileResponse implements PackableObject {
     public List<PkgRecType> recType;
 
     // only for sp
-    public String createStmt = null;
     public String javaSignature = null;
 
     public CompileResponse(int errCode, int line, int column, String msg) {
@@ -118,7 +117,6 @@ public class CompileResponse implements PackableObject {
     // for Stored Procedure
     public CompileResponse(
             String translated,
-            String stmt,
             String className,
             String javaSignature,
             Set<Dependency> dependencies) {
@@ -126,7 +124,6 @@ public class CompileResponse implements PackableObject {
         this.errCode = 0;
         this.type = CompileRequest.PLCSQL_COMPILE_TYPE_SP;
         this.translated = translated;
-        this.createStmt = stmt;
         this.className = className;
         this.javaSignature = javaSignature;
         this.dependencies = dependencies;
@@ -164,7 +161,6 @@ public class CompileResponse implements PackableObject {
                     packer.packString(translated);
                     packer.packString(className);
                     packer.packCString(compiledCode);
-                    packer.packString(createStmt);
                     packer.packString(javaSignature);
 
                     if (dependencies != null && dependencies.size() > 0) {
@@ -179,6 +175,7 @@ public class CompileResponse implements PackableObject {
                     break;
 
                 case CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC:
+                case CompileRequest.PLCSQL_COMPILE_TYPE_PKG_BODY:
                     packer.packString(translated);
                     packer.packString(className);
                     packer.packCString(compiledCode);
@@ -237,10 +234,6 @@ public class CompileResponse implements PackableObject {
                         packer.packInt(0);
                     }
 
-                    break;
-
-                case CompileRequest.PLCSQL_COMPILE_TYPE_PKG_BODY:
-                    // nothing to pack
                     break;
             }
         }

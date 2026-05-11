@@ -1034,7 +1034,7 @@ jsp_find_pkg_code (const char *unique_name)
 }
 
 static int
-jsp_get_pkg_scode_body (const char *unique_name, DB_VALUE *value)
+jsp_get_pkg_scode (const char *unique_name, DB_VALUE *value, bool for_body)
 {
   int err;
   MOP mop;
@@ -1055,10 +1055,22 @@ jsp_get_pkg_scode_body (const char *unique_name, DB_VALUE *value)
     }
 
   AU_DISABLE (save);
-  err = db_get (mop, PKG_CODE_ATTR_SCODE_BODY, value);
+  err = db_get (mop, for_body ? PKG_CODE_ATTR_SCODE_BODY : PKG_CODE_ATTR_SCODE_SPEC, value);
   AU_ENABLE (save);
 
   return err;
+}
+
+static int
+jsp_get_pkg_scode_spec (const char *unique_name, DB_VALUE *value)
+{
+    return jsp_get_pkg_scode(unique_name, value, false);
+}
+
+static int
+jsp_get_pkg_scode_body (const char *unique_name, DB_VALUE *value)
+{
+    return jsp_get_pkg_scode(unique_name, value, true);
 }
 
 static int
@@ -1242,6 +1254,9 @@ jsp_drop_pkg_body (const char *unique_name)
       }
     else
       {
+        // TODO: remove below and create the package with the scode_spec again
+        //      the scode_spec can have unimplemented declaration, and we need to recompile the spec to figure this out
+
 	// scode_spec is not null. only clear the scode_body.
 
 	DB_OBJECT *object;
@@ -1419,7 +1434,7 @@ jsp_drop_pkg_members (MOP pkg_mop, const char *cnt_attr, const char *members_att
 }
 
 static int
-jsp_drop_pkg_spec (const char *unique_name, MOP pkg_mop, MOP owner)
+jsp_drop_pkg (const char *unique_name, MOP pkg_mop, MOP owner)
 {
   MOP mop;
   int err, save;
@@ -1457,81 +1472,11 @@ jsp_drop_pkg_spec (const char *unique_name, MOP pkg_mop, MOP owner)
   mop = jsp_find_pkg_code (unique_name);
   if (mop)
     {
-      DB_VALUE scode_body;
-
-      err = db_get (mop, PKG_CODE_ATTR_SCODE_BODY, &scode_body);
+      err = obj_delete (mop);
       if (err != NO_ERROR)
-	{
-	  goto cleanup0;
-	}
-
-      if (DB_IS_NULL (&scode_body))
-	{
-
-	  err = obj_delete (mop);
-	  if (err != NO_ERROR)
-	    {
-	      goto cleanup0;
-	    }
-	}
-      else
-	{
-	  DB_OBJECT *object;
-	  DB_VALUE null_value;
-
-	  pr_clear_value (&scode_body);
-
-	  obt = dbt_edit_object (mop);  // side effect 1
-	  if (!obt)
-	    {
-	      ASSERT_ERROR_AND_SET (err);
-	      goto cleanup0;
-	    }
-
-	  // set null to all the attributes except for pkg_unique_name and scode_body
-	  db_make_null (&null_value);
-	  err = dbt_put_internal (obt, PKG_CODE_ATTR_NAME, &null_value);
-	  if (err != NO_ERROR)
-	    {
-	      goto cleanup1;
-	    }
-	  err = dbt_put_internal (obt, PKG_CODE_ATTR_STYPE, &null_value);
-	  if (err != NO_ERROR)
-	    {
-	      goto cleanup1;
-	    }
-	  err = dbt_put_internal (obt, PKG_CODE_ATTR_SCODE_SPEC, &null_value);
-	  if (err != NO_ERROR)
-	    {
-	      goto cleanup1;
-	    }
-	  err = dbt_put_internal (obt, PKG_CODE_ATTR_OTYPE, &null_value);
-	  if (err != NO_ERROR)
-	    {
-	      goto cleanup1;
-	    }
-	  err = dbt_put_internal (obt, PKG_CODE_ATTR_OCODE, &null_value);
-	  if (err != NO_ERROR)
-	    {
-	      goto cleanup1;
-	    }
-
-	  object = dbt_finish_object (obt);
-	  if (!object)
-	    {
-	      ASSERT_ERROR_AND_SET (err);
-	      goto cleanup1;
-	    }
-	  obt = NULL;   // side effect 1 cleaned
-
-	  // flush instance
-	  err = locator_flush_instance (object);
-	  if (err != NO_ERROR)
-	    {
-	      obj_delete (object);
-	      goto cleanup0;
-	    }
-	}
+        {
+          goto cleanup0;
+        }
     }
   else
     {
@@ -3037,6 +2982,16 @@ jsp_create_pkg_body (PARSER_CONTEXT *parser, PT_NODE *statement, const char *uni
   pkg_compile_request.type = PLCSQL_COMPILE_TYPE_PKG_BODY;
   pkg_compile_request.body_code.assign (statement->sql_user_text, statement->sql_user_text_len);
   pkg_compile_request.owner.assign (owner_name);
+  err = jsp_get_pkg_scode_spec(unique_name, &value);
+  if (err != NO_ERROR)
+    {
+      goto error_exit;
+    }
+  if (!DB_IS_NULL (&value))
+    {
+      pkg_compile_request.code.assign (db_get_string (&value));
+      pr_clear_value (&value);
+    }
 
   au_perform_push_user (owner);
   err = plcsql_compile (pkg_compile_request, pkg_compile_response);
@@ -3086,8 +3041,8 @@ jsp_create_pkg_spec (PARSER_CONTEXT *parser, PT_NODE *statement, const char *uni
     {
       if (statement->info.pkg.or_replace)
 	{
-	  // drop existing stored procedure
-	  err = jsp_drop_pkg_spec (unique_name, pkg_mop, owner_mop);
+	  // drop existing package (spec and body)
+	  err = jsp_drop_pkg (unique_name, pkg_mop, owner_mop);
 	  if (err != NO_ERROR)
 	    {
 	      goto error_exit;
@@ -3356,7 +3311,7 @@ jsp_drop_package (PARSER_CONTEXT *parser, PT_NODE *statement)
 	  sm_qualifier_name (unique_name, owner_name, DB_MAX_USER_LENGTH);
 	  owner_mop = db_find_user (owner_name);
 	  pkg_mop = jsp_find_pkg (unique_name, DB_AUTH_NONE);
-	  err = jsp_drop_pkg_spec (unique_name, pkg_mop, owner_mop);
+	  err = jsp_drop_pkg (unique_name, pkg_mop, owner_mop);
 	}
 
       if (err != NO_ERROR)

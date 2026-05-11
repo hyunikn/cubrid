@@ -83,6 +83,10 @@ public class Misc {
         PROC,
     }
 
+    public static boolean isEmptyStr(String s) {
+        return s == null || s.length() == 0;
+    }
+
     public static boolean isEmpty(NodeList nl) {
         return (nl == null || nl.nodes.size() == 0);
     }

@@ -76,12 +76,12 @@ enum index_pkg_attr
     MAP_LIST_ITEM(OCODE)
 
 #define PKG_CODE_ATTR_PKG_UNIQUE_NAME       "pkg_unique_name"
-#define PKG_CODE_ATTR_NAME        	"name"
-#define PKG_CODE_ATTR_STYPE       	"stype"
-#define PKG_CODE_ATTR_SCODE_SPEC  	"scode_spec"
-#define PKG_CODE_ATTR_SCODE_BODY  	"scode_body"
-#define PKG_CODE_ATTR_OTYPE       	"otype"
-#define PKG_CODE_ATTR_OCODE      	"ocode"
+#define PKG_CODE_ATTR_NAME                  "name"
+#define PKG_CODE_ATTR_STYPE                 "stype"
+#define PKG_CODE_ATTR_SCODE_SPEC            "scode_spec"
+#define PKG_CODE_ATTR_SCODE_BODY            "scode_body"
+#define PKG_CODE_ATTR_OTYPE                 "otype"
+#define PKG_CODE_ATTR_OCODE                 "ocode"
 
 enum index_pkg_code_attr
 {

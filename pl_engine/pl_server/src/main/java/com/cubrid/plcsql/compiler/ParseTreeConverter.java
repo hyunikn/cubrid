@@ -74,10 +74,10 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
     public final SymbolStack symbolStack = new SymbolStack();
     public final Set<Dependency> dependenciesOfStaticSql = new HashSet<>();
 
-    public ParseTreeConverter(InstanceStore iStore, String spOwner, String spRevision) {
+    public ParseTreeConverter(InstanceStore iStore, String spOwner, String revision) {
         this.iStore = iStore;
         this.spOwner = Misc.getNormalizedText(spOwner);
-        this.spRevision = spRevision;
+        this.revision = revision;
         this.sqlSerialNo = 1;
     }
 
@@ -246,7 +246,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
     public Unit visitCreate_routine(Create_routineContext ctx) {
         previsitRoutine_def(ctx.routine_def(), null);
         DeclRoutine decl = visitRoutine_def(ctx.routine_def());
-        return new Unit(ctx, autonomousTransaction, connectionRequired, decl, spRevision);
+        return new Unit(ctx, connectionRequired, decl, revision);
     }
 
     @Override
@@ -1317,11 +1317,6 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         throw new SemanticError(
                 Misc.getLineColumnOf(ctx), "AUTONOMOUS_TRANSACTION is not supported yet");
 
-        /*
-        // just turn on the flag and return nothing
-        autonomousTransaction = true;
-        return null;
-         */
     }
 
     @Override
@@ -2698,7 +2693,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
             new LinkedHashMap<>();
 
     private final String spOwner;
-    private final String spRevision;
+    private final String revision;
 
     private StmtLoop.LoopOptimizables loopOptimizables = null;
 
@@ -2707,7 +2702,6 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
     private int exHandlerDepth;
 
-    private boolean autonomousTransaction = false;
     private boolean connectionRequired = false;
 
     private boolean controlFlowBlocked;

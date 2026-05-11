@@ -274,7 +274,8 @@ public class PlcsqlCompilerMain {
         if (type == CompileRequest.PLCSQL_COMPILE_TYPE_SP) {
             unit = (Unit) converter.visit(codeTree);
         } else {
-            unit = converter.convertPackageSpecAndBody(codeTree, bodyCodeTree); // NOTE: bodyCodeTree can be null
+            // either codeTree or bodyCodeTree can be null, but not both
+            unit = converter.convertPackageSpecAndBody(codeTree, bodyCodeTree);
         }
 
         if (verbose) {

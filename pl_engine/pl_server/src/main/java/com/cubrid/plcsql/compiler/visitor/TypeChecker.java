@@ -75,8 +75,20 @@ public class TypeChecker extends AstVisitor<Type> {
     }
 
     @Override
-    public Type visitUnit(Unit node) {
+    public Type visitUnitSp(UnitSp node) {
         visit(node.routine);
+        return null;
+    }
+
+    @Override
+    public Type visitUnitPkg(UnitPkg node) {
+        visit(node.pkg);
+        return null;
+    }
+
+    @Override
+    public Type visitDeclPackage(DeclPackage node) {
+        // TODO package
         return null;
     }
 

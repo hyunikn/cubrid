@@ -44,6 +44,7 @@ public class DeclCursor extends DeclId {
 
     public final String name;
     public final NodeList<DeclParamIn> paramList;
+    public final TypeSpec recordType;
     public final StaticSql staticSql;
 
     public int[] paramRefCounts;
@@ -53,12 +54,14 @@ public class DeclCursor extends DeclId {
             ParserRuleContext ctx,
             String name,
             NodeList<DeclParamIn> paramList,
+            TypeSpec recordType,
             StaticSql staticSql) {
         super(ctx);
 
         assert paramList != null;
         this.name = name;
         this.paramList = paramList;
+        this.recordType = recordType;
         this.staticSql = staticSql;
 
         setHostValuesMap(paramList, staticSql.hostExprs.keySet());

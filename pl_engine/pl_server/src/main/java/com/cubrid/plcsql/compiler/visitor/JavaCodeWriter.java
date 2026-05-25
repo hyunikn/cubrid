@@ -79,7 +79,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
         javaTypesUsed.add("com.cubrid.plcsql.predefined.PlcsqlRuntimeError");
         javaTypesUsed.add("java.util.List");
 
-        CodeToResolve ctr = visitUnit(unit);
+        CodeToResolve ctr = visit(unit);
         ctr.resolve(0, codeLines, codeRangeMarkers);
 
         codeLines.add(
@@ -103,7 +103,16 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
     }
 
     // -----------------------------------------------------------------
-    // Unit
+    // UnitPkg
+    //
+
+    public CodeToResolve visitUnitPkg(UnitPkg node) {
+        // TODO package
+        return null;
+    }
+
+    // -----------------------------------------------------------------
+    // UnitSp
     //
     private static final String strGetConn =
             "final Connection conn = DriverManager.getConnection(\"jdbc:default:connection::\");";
@@ -165,7 +174,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
             };
 
     @Override
-    public CodeToResolve visitUnit(Unit node) {
+    public CodeToResolve visitUnitSp(UnitSp node) {
 
         if (node.connectionRequired) {
             javaTypesUsed.add("java.sql.*");
@@ -176,7 +185,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                 node.routine.decls == null
                         ? ""
                         : new CodeTemplate(
-                                "DeclClass of Unit",
+                                "DeclClass of UnitSp",
                                 Misc.UNKNOWN_LINE_COLUMN,
                                 tmplDeclBlock,
                                 "%'BLOCK'%",
@@ -238,7 +247,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
         String[] recordAssignFuncs = recordLines.toArray(DUMMY_STRING_ARRAY);
 
         // imports
-        // CAUTION: importsArray must be made after visiting all the subnodes of this Unit node
+        // CAUTION: importsArray must be made after visiting all the subnodes of this UnitSp node
         // because javaTypesUsed,
         //  which is the set of Java types to appear in the generated Java code, is built while
         // visiting the submodes
@@ -270,7 +279,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                         : visitNodeList(node.routine.paramList).setDelimiter(",");
 
         return new CodeTemplate(
-                "Unit",
+                "UnitSp",
                 new int[] {1, 1},
                 tmplUnit,
                 "%'+MAIN-USER-CODE'%",
@@ -353,6 +362,12 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
     @Override
     public CodeToResolve visitDeclProc(DeclProc node) {
         return visitDeclRoutine(node);
+    }
+
+    @Override
+    public CodeToResolve visitDeclPackage(DeclPackage node) {
+        // TODO package
+        return null;
     }
 
     @Override

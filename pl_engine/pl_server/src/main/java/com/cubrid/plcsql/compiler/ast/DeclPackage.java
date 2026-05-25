@@ -30,20 +30,35 @@
 
 package com.cubrid.plcsql.compiler.ast;
 
-import java.sql.*;
+import com.cubrid.plcsql.compiler.visitor.AstVisitor;
 import org.antlr.v4.runtime.ParserRuleContext;
 
-public abstract class Unit extends AstNode {
+public class DeclPackage extends Decl {
 
-    public final boolean connectionRequired;
-    public final String revision;
-
-    public Unit(ParserRuleContext ctx, boolean connectionRequired, String revision) {
-        super(ctx);
-
-        this.connectionRequired = connectionRequired;
-        this.revision = revision;
+    @Override
+    public <R> R accept(AstVisitor<R> visitor) {
+        return visitor.visitDeclPackage(this);
     }
 
-    public abstract String getClassName();
+    public final String name;
+    public NodeList<Decl> pkgItems;
+    public Body initializer;
+
+    public DeclPackage(
+            ParserRuleContext ctx, String name, NodeList<Decl> pkgItems, Body initializer) {
+        super(ctx);
+
+        this.name = name;
+        this.pkgItems = pkgItems;
+        this.initializer = initializer;
+    }
+
+    public String getDeclBlockName() {
+        return name.toLowerCase() + '_' + (scope.level + 1);
+    }
+
+    @Override
+    public String kind() {
+        return "package";
+    }
 }

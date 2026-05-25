@@ -31,11 +31,13 @@
 package com.cubrid.plcsql.compiler;
 
 import com.cubrid.jsp.Server;
-import com.cubrid.jsp.data.CompileResponse;
 import com.cubrid.jsp.data.CompileRequest;
-import com.cubrid.plcsql.compiler.antlrgen.PlcParser;
+import com.cubrid.jsp.data.CompileResponse;
 import com.cubrid.plcsql.compiler.antlrgen.PlcLexer;
+import com.cubrid.plcsql.compiler.antlrgen.PlcParser;
 import com.cubrid.plcsql.compiler.ast.Unit;
+import com.cubrid.plcsql.compiler.ast.UnitPkg;
+import com.cubrid.plcsql.compiler.ast.UnitSp;
 import com.cubrid.plcsql.compiler.ast.loopOpt.SqlUse;
 import com.cubrid.plcsql.compiler.error.SemanticError;
 import com.cubrid.plcsql.compiler.error.SyntaxError;
@@ -161,7 +163,8 @@ public class PlcsqlCompilerMain {
         return t;
     }
 
-    private static CompileResponse compileInner(InstanceStore iStore, String revision, CompileRequest request) {
+    private static CompileResponse compileInner(
+            InstanceStore iStore, String revision, CompileRequest request) {
 
         int type = request.type;
         String code = request.code;
@@ -171,25 +174,10 @@ public class PlcsqlCompilerMain {
         // System.out.println("[TEMP] text to the compiler");
         // System.out.println(code);
 
-        /* the following cases are possible
-
-         . type == PLCSQL_COMPILE_TYPE_SP,
-                . code non-empty, bodyCode empty
-         . type == PLCSQL_COMPILE_TYPE_PKG_SPEC,
-                . code non-empty, bodyCode empty
-                . code non-empty, bodyCode non-empty
-         . type == PLCSQL_COMPILE_TYPE_PKG_BODY,
-                . code non-empty, bodyCode non-empty
-                . code empty, bodyCode non-empty
-
-         Generate Java code only when code is non-empty.
-         That is, do not generate Java code when type == PLCSQL_COMPILE_TYPE_PKG_BODY, code is empty, and bodyCode is non-empty
-         */
         assert (type == CompileRequest.PLCSQL_COMPILE_TYPE_SP && !Misc.isEmptyStr(code) && Misc.isEmptyStr(bodyCode))
-            || (type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC && !Misc.isEmptyStr(code) && !Misc.isEmptyStr(bodyCode))
-            || (type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC && !Misc.isEmptyStr(code) && Misc.isEmptyStr(bodyCode))
-            || (type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_BODY && !Misc.isEmptyStr(code) && !Misc.isEmptyStr(bodyCode))
-            || (type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_BODY && Misc.isEmptyStr(code) && !Misc.isEmptyStr(bodyCode));
+                || (type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC && !Misc.isEmptyStr(code))
+                || (type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_BODY && !Misc.isEmptyStr(bodyCode));
+        assert !(Misc.isEmptyStr(code) && Misc.isEmptyStr(bodyCode));
 
         boolean verbose = request.mode.contains("v");
         boolean printParseTree = request.mode.contains("p");
@@ -207,7 +195,8 @@ public class PlcsqlCompilerMain {
         ParseTree codeTree = null, bodyCodeTree = null;
 
         if (type == CompileRequest.PLCSQL_COMPILE_TYPE_SP) {
-            // for a SP
+            // for an SP
+
             CharStream input = CharStreams.fromString(code);
             codeTree = parse(input, verbose, logStore);
             if (codeTree == null) {
@@ -215,19 +204,24 @@ public class PlcsqlCompilerMain {
             }
         } else {
             // for a Package
-            if (!Misc.isEmptyStr(code)) {
-                CharStream input = CharStreams.fromString(code);
-                codeTree = parse(input, verbose, logStore);
-                if (codeTree == null) {
-                    throw new RuntimeException("parsing failed for package spec code");
-                }
-            }
 
             if (!Misc.isEmptyStr(bodyCode)) {
                 CharStream input = CharStreams.fromString(bodyCode);
                 bodyCodeTree = parse(input, verbose, logStore);
                 if (bodyCodeTree == null) {
-                    throw new RuntimeException("parsing failed for package body code");
+                    throw new RuntimeException("parsing failed for the package body code");
+                }
+            }
+
+            if (Misc.isEmptyStr(code)) {
+                assert type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_BODY;
+                // just return: semantic check and further processes are not possible without a spec code
+                return new CompileResponse();
+            } else {
+                CharStream input = CharStreams.fromString(code);
+                codeTree = parse(input, verbose, logStore);
+                if (codeTree == null) {
+                    throw new RuntimeException("parsing failed for the package spec code");
                 }
             }
         }
@@ -269,13 +263,15 @@ public class PlcsqlCompilerMain {
         // converting parse tree to AST
 
         Unit unit;
+        UnitSp unitSp = null;
+        UnitPkg unitPkg = null;
         ParseTreeConverter converter = new ParseTreeConverter(iStore, owner, revision);
 
         if (type == CompileRequest.PLCSQL_COMPILE_TYPE_SP) {
-            unit = (Unit) converter.visit(codeTree);
+            unit = unitSp = (UnitSp) converter.visit(codeTree);
         } else {
             // either codeTree or bodyCodeTree can be null, but not both
-            unit = converter.convertPackageSpecAndBody(codeTree, bodyCodeTree);
+            unit = unitPkg = converter.convertPackageCode(codeTree, bodyCodeTree);
         }
 
         if (verbose) {
@@ -304,36 +300,38 @@ public class PlcsqlCompilerMain {
                         converter.dependenciesOfStaticSql,
                         owner,
                         sqlUsesInRecursiveCalls);
-        typeChecker.visitUnit(unit);
+        typeChecker.visit(unit);
 
         if (verbose) {
             t0 = logElapsedTime(logStore, "typechecking", t0);
         }
 
-        if (codeTree == null) {
-            assert type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_BODY;
-            return new CompileResponse("", "", "", null);   // no contents in response. just OK (no errors)
-        } else {
-            // ------------------------------------------
-            // Java code generation
+        // ------------------------------------------
+        // Java code generation
 
-            String javaCode = new JavaCodeWriter(iStore, sqlUsesInRecursiveCalls).buildCodeLines(unit);
+        String javaCode =
+                new JavaCodeWriter(iStore, sqlUsesInRecursiveCalls).buildCodeLines(unit);
 
-            if (verbose) {
-                logElapsedTime(logStore, "Java code generation", t0);
-            }
+        if (verbose) {
+            logElapsedTime(logStore, "Java code generation", t0);
+        }
 
-            // ------------------------------------------
+        // ------------------------------------------
 
-            if (verbose) {
-                Server.log(unit.getClassName() + logStore.toString());
-            }
+        if (verbose) {
+            Server.log(unit.getClassName() + logStore.toString());
+        }
+
+        if (type == CompileRequest.PLCSQL_COMPILE_TYPE_SP) {
 
             return new CompileResponse(
-                javaCode,
-                unit.getClassName(),
-                unit.getJavaSignature(),
-                typeChecker.dependencies);
+                    javaCode,
+                    unitSp.getClassName(),
+                    unitSp.getJavaSignature(),
+                    typeChecker.dependencies);
+        } else {
+            // TODO package
+            return null;
         }
     }
 

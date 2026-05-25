@@ -648,6 +648,21 @@ public class SymbolStack {
         map.put(name, decl);
     }
 
+    DeclCursor getDeclCursor(String name) {
+        Decl d = getDecl(name);
+        if (d instanceof DeclCursor) {
+            return (DeclCursor) d;
+        } else {
+            if (d == null) {
+                return null;
+            } else {
+                throw new SemanticError(
+                        Misc.getLineColumnOf(d.ctx), // s097
+                        name + " is not a cursor but a " + d.kind() + " in this scope");
+            }
+        }
+    }
+
     DeclProc getDeclProc(String name) {
         Decl d = getDecl(name);
         if (d instanceof DeclProc) {

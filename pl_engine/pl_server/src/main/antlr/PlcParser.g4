@@ -37,48 +37,36 @@ sql_script
     ;
 
 create_package_spec
-    : CREATE (OR_REPLACE)? PACKAGE uniq_name (IS | AS) package_item+ END label_name? (SEMICOLON)?
+    : CREATE (OR_REPLACE)? PACKAGE uniq_name (IS | AS) seq_of_declare_specs END label_name? (SEMICOLON)?
     ;
 
 create_package_body
-    : CREATE (OR_REPLACE)? PACKAGE BODY uniq_name (IS | AS) package_item+
-      (BEGIN seq_of_statements (EXCEPTION exception_handler+)?)?
-      END label_name? (SEMICOLON)?
+    : CREATE (OR_REPLACE)? PACKAGE BODY uniq_name (IS | AS) seq_of_declare_specs END label_name? (SEMICOLON)?
+    | CREATE (OR_REPLACE)? PACKAGE BODY uniq_name (IS | AS) seq_of_declare_specs body
     ;
 
-package_item
-    : variable_def
-    | constant_def
-    | exception_decl
-    | cursor_decl
-    | cursor_def
-    | routine_decl
-    | routine_def
-    | record_type_def
+/*
+record_type_decl
+    : TYPE identifier IS RECORD LPAREN record_field_decl (',' record_field_decl)+ RPAREN (COMMENT CHAR_STRING)? SEMICOLON
     ;
 
-record_type_def
-    : TYPE identifier IS RECORD LPAREN record_field_def (',' record_field_def)+ RPAREN (COMMENT CHAR_STRING)? SEMICOLON
-    ;
-
-record_field_def
+record_field_decl
     : identifier type_spec
     ;
+ */
 
 create_routine
-    : CREATE (OR_REPLACE)? routine_def
+    : CREATE (OR_REPLACE)? routine_decl
     ;
 
 routine_decl
-    : (PROCEDURE | FUNCTION) uniq_name ( (LPAREN parameter_list RPAREN)? | LPAREN RPAREN ) (RETURN type_spec)?
+    : PROCEDURE uniq_name ( (LPAREN parameter_list RPAREN)? | LPAREN RPAREN )
       (authid_spec? deterministic_spec? | deterministic_spec authid_spec)
-      (COMMENT CHAR_STRING)? SEMICOLON
-    ;
-
-routine_def
-    : (PROCEDURE | FUNCTION) uniq_name ( (LPAREN parameter_list RPAREN)? | LPAREN RPAREN ) (RETURN type_spec)?
+      ((IS | AS) (LANGUAGE PLCSQL)? seq_of_declare_specs? body)?
+      (COMMENT CHAR_STRING)? (SEMICOLON)?
+    | FUNCTION uniq_name ( (LPAREN parameter_list RPAREN)? | LPAREN RPAREN ) RETURN type_spec
       (authid_spec? deterministic_spec? | deterministic_spec authid_spec)
-      (IS | AS) (LANGUAGE PLCSQL)? seq_of_declare_specs? body
+      ((IS | AS) (LANGUAGE PLCSQL)? seq_of_declare_specs? body)?
       (COMMENT CHAR_STRING)? (SEMICOLON)?
     ;
 
@@ -114,30 +102,28 @@ seq_of_declare_specs
     : declare_spec+
     ;
 
+/* sp: stored procedure, ps: package spec, pb: package body */
 declare_spec
     : pragma_decl
-    | constant_def
+    | constant_decl
     | exception_decl
-    | variable_def
-    | cursor_def
-    | routine_def
+    | variable_decl
+    | cursor_decl
+    | routine_decl
+    //| record_type_decl
     ;
 
-variable_def
+variable_decl
     : identifier type_spec ((NOT NULL_)? default_value_part)? (COMMENT CHAR_STRING)? SEMICOLON
     ;
 
-constant_def
+constant_decl
     : identifier CONSTANT type_spec (NOT NULL_)? default_value_part (COMMENT CHAR_STRING)? SEMICOLON
     ;
 
 cursor_decl
     : CURSOR identifier ( (LPAREN cursor_parameter_list RPAREN)? | LPAREN RPAREN ) RETURN type_spec (COMMENT CHAR_STRING)? SEMICOLON
-    ;
-
-cursor_def
-    : CURSOR identifier ( (LPAREN cursor_parameter_list RPAREN)? | LPAREN RPAREN ) IS
-      static_sql (COMMENT CHAR_STRING)? SEMICOLON
+    | CURSOR identifier ( (LPAREN cursor_parameter_list RPAREN)? | LPAREN RPAREN ) IS static_sql (COMMENT CHAR_STRING)? SEMICOLON
     ;
 
 cursor_parameter_list

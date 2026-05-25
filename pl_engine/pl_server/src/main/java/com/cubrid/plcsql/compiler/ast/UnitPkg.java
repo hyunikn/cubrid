@@ -30,20 +30,40 @@
 
 package com.cubrid.plcsql.compiler.ast;
 
+import com.cubrid.plcsql.compiler.visitor.AstVisitor;
 import java.sql.*;
 import org.antlr.v4.runtime.ParserRuleContext;
 
-public abstract class Unit extends AstNode {
+public class UnitPkg extends Unit {
 
-    public final boolean connectionRequired;
-    public final String revision;
-
-    public Unit(ParserRuleContext ctx, boolean connectionRequired, String revision) {
-        super(ctx);
-
-        this.connectionRequired = connectionRequired;
-        this.revision = revision;
+    @Override
+    public <R> R accept(AstVisitor<R> visitor) {
+        return visitor.visitUnitPkg(this);
     }
 
-    public abstract String getClassName();
+    public final DeclPackage pkg;
+
+    public UnitPkg(
+            ParserRuleContext ctx, boolean connectionRequired, String revision, DeclPackage pkg) {
+        super(ctx, connectionRequired, revision);
+
+        this.pkg = pkg;
+    }
+
+    public String getClassName() {
+
+        if (className == null) {
+            className =
+                    String.format(
+                            "Pkg_%s_%s_%d", pkg.name, revision, new java.util.Date().getTime());
+        }
+
+        return className;
+    }
+
+    // ------------------------------------------
+    // Private
+    // ------------------------------------------
+
+    private String className;
 }

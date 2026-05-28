@@ -66,7 +66,7 @@ public class DeclFunc extends DeclRoutine {
     }
 
     @Override
-    public boolean isBodyDeclOf(Decl d) {
+    public boolean givesBodyOf(Decl d) {
 
         if (d == null || d.getClass() != DeclFunc.class) {
             return false;

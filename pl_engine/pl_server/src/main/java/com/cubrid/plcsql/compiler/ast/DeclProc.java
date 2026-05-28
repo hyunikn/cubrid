@@ -64,7 +64,7 @@ public class DeclProc extends DeclRoutine {
     }
 
     @Override
-    public boolean isBodyDeclOf(Decl d) {
+    public boolean givesBodyOf(Decl d) {
 
         if (d == null || d.getClass() != DeclProc.class) {
             return false;

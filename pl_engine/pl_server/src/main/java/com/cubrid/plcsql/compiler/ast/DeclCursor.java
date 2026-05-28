@@ -73,7 +73,7 @@ public class DeclCursor extends DeclId {
     }
 
     @Override
-    public boolean isBodyDeclOf(Decl d) {
+    public boolean givesBodyOf(Decl d) {
 
         if (d == null || d.getClass() != DeclCursor.class) {
             return false;

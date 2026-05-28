@@ -1373,13 +1373,21 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
         for (Declare_specContext ds : ctx.declare_spec()) {
             Decl d = (Decl) visit(ds);
-            if (d == null) {
-                // only routine declarations without a body and cursor declarations without a static sql
-                // can return null
-                assert (ds.routine_decl() != null && ds.routine_decl().body() == null) ||
-                       (ds.cursor_decl() != null && ds.cursor_decl().static_sql() == null);
-            } else {
-                ret.addNode(d);
+            assert d != null;
+            ret.addNode(d);
+        }
+
+        if (topLevelStmt == CREATE_SP || symbolStack.getCurrentScope().level >= symbolStack.LEVEL_MAIN + 2) {
+
+            // NOTE: packge spec and body can have a declaration
+            // which does not have a body at the top declaration level (LEVEL_MAIN + 1)
+
+            for (Decl d: ret.nodes) {
+                if (d.lackOfBody()) {
+                    throw new SemanticError(
+                            Misc.getLineColumnOf(d.ctx), // s017
+                            "declaration must be given a body");
+                }
             }
         }
 

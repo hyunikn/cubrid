@@ -52,7 +52,7 @@ public abstract class Decl extends AstNode {
         this.bodyDecl = bodyDecl;
     }
 
-    public boolean isBodyDeclOf(Decl other) {
+    public boolean givesBodyOf(Decl other) {
         // by default false
         // DeclCursor, DeclFunc, DeclProc will override this default
         return false;

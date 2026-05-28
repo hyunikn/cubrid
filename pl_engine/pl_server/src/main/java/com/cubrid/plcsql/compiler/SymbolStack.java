@@ -628,10 +628,18 @@ public class SymbolStack {
         Map<String, Decl> map = symbolTable.decls;
 
         if (map.containsKey(name)) {
-            throw new SemanticError(
-                    Misc.getLineColumnOf(decl.ctx), // s062
-                    name + " has already been declared in the same scope");
+
+            Decl old = map.get(name);
+            if (decl.givesBodyOf(old)) {
+                decl.setScope(symbolTable.scope);
+                old.setBodyDecl(decl);
+            } else {
+                throw new SemanticError(
+                        Misc.getLineColumnOf(decl.ctx), // s062
+                        name + " has already been declared in the same scope");
+            }
         }
+
         if (symbolTable.scope.level == LEVEL_MAIN && map.size() == 0) {
             // the first symbol added to the level 1 is the top-level procedure/function being
             // created or replaced

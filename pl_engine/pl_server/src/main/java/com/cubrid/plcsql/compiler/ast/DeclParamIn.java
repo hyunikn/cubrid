@@ -56,6 +56,16 @@ public class DeclParamIn extends DeclParam {
         return "in-parameter";
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || o.getClass() != DeclParamIn.class) {
+            return false;
+        }
+
+        DeclParamIn other = (DeclParamIn) o;
+        return this.name.equals(other.name) && this.typeSpec.type == other.typeSpec.type;
+    }
+
     public String toJavaSignature() {
         return String.format("%s", typeSpec.type.fullJavaType);
     }

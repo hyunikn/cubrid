@@ -44,7 +44,7 @@ public class DeclCursor extends DeclId {
 
     public final String name;
     public final NodeList<DeclParamIn> paramList;
-    public final TypeSpec recordType;
+    public final TypeSpec recordTypeSpec;
     public final StaticSql staticSql;
 
     public int[] paramRefCounts;
@@ -54,17 +54,44 @@ public class DeclCursor extends DeclId {
             ParserRuleContext ctx,
             String name,
             NodeList<DeclParamIn> paramList,
-            TypeSpec recordType,
+            TypeSpec recordTypeSpec,
             StaticSql staticSql) {
         super(ctx);
 
         assert paramList != null;
         this.name = name;
         this.paramList = paramList;
-        this.recordType = recordType;
+        this.recordTypeSpec = recordTypeSpec;
         this.staticSql = staticSql;
 
         setHostValuesMap(paramList, staticSql.hostExprs.keySet());
+    }
+
+    @Override
+    public boolean lackOfBody() {
+        return staticSql == null && bodyDecl == null;
+    }
+
+    @Override
+    public boolean isBodyDeclOf(Decl d) {
+
+        if (d == null || d.getClass() != DeclCursor.class) {
+            return false;
+        }
+
+        DeclCursor other = (DeclCursor) d;
+
+        // name and parameters must be the same
+        if (!this.name.equals(other.name) || !this.paramList.equals(other.paramList)) {
+            return false;
+        }
+
+        // this must have static sql and the other may not
+        if (this.staticSql == null || other.staticSql != null) {
+            return false;
+        }
+
+        return this.recordTypeSpec.type == other.recordTypeSpec.type;
     }
 
     @Override

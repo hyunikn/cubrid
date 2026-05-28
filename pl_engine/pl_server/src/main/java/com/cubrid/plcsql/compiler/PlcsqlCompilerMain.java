@@ -216,7 +216,7 @@ public class PlcsqlCompilerMain {
             if (Misc.isEmptyStr(code)) {
                 assert type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_BODY;
                 // just return: semantic check and further processes are not possible without a spec code
-                return new CompileResponse();
+                return new CompileResponse(type);
             } else {
                 CharStream input = CharStreams.fromString(code);
                 codeTree = parse(input, verbose, logStore);
@@ -297,7 +297,7 @@ public class PlcsqlCompilerMain {
                 new TypeChecker(
                         iStore,
                         converter.symbolStack,
-                        converter.dependenciesOfStaticSql,
+                        converter.dependencies,
                         owner,
                         sqlUsesInRecursiveCalls);
         typeChecker.visit(unit);
@@ -325,12 +325,23 @@ public class PlcsqlCompilerMain {
         if (type == CompileRequest.PLCSQL_COMPILE_TYPE_SP) {
 
             return new CompileResponse(
+                    CompileRequest.PLCSQL_COMPILE_TYPE_SP,
                     javaCode,
                     unitSp.getClassName(),
                     unitSp.getJavaSignature(),
                     typeChecker.dependencies);
+        } else if (type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC) {
+
+            CompileResponse resp = new CompileResponse(
+                    CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC,
+                    javaCode,
+                    unitPkg.getClassName(),
+                    typeChecker.dependencies);
+            converter.fillPkgSpecIntoResponse(resp);    // converter remembers package spec items
+
+            return resp;
         } else {
-            // TODO package
+            assert false;
             return null;
         }
     }

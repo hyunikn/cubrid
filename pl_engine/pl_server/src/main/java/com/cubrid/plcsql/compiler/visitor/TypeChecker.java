@@ -64,12 +64,12 @@ public class TypeChecker extends AstVisitor<Type> {
     public TypeChecker(
             InstanceStore iStore,
             SymbolStack symbolStack,
-            Set<Dependency> dependenciesOfStaticSql,
+            Set<Dependency> dependencies,
             String spOwner,
             Set<SqlUse> sqlUsesInRecursiveCalls) {
         this.iStore = iStore;
         this.symbolStack = symbolStack;
-        dependencies.addAll(dependenciesOfStaticSql);
+        this.dependencies.addAll(dependencies);
         this.spOwner = spOwner;
         this.sqlUsesInRecursiveCalls = sqlUsesInRecursiveCalls;
     }
@@ -107,12 +107,6 @@ public class TypeChecker extends AstVisitor<Type> {
 
     @Override
     public Type visitTypeSpec(TypeSpec node) {
-        if (node.type instanceof TypeRecord) {
-            TypeRecord tyRec = (TypeRecord) node.type;
-            if (tyRec.ofTable) {
-                dependencies.add(new Dependency(Dependency.OBJ_TYPE_TABLE, tyRec.rowName, spOwner));
-            }
-        }
         return node.type;
     }
 

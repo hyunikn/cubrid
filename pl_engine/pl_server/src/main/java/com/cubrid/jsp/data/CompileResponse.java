@@ -116,13 +116,16 @@ public class CompileResponse implements PackableObject {
 
     // for Stored Procedure
     public CompileResponse(
+            int type,
             String translated,
             String className,
             String javaSignature,
             Set<Dependency> dependencies) {
 
+        assert type == CompileRequest.PLCSQL_COMPILE_TYPE_SP;
+
         this.errCode = 0;
-        this.type = CompileRequest.PLCSQL_COMPILE_TYPE_SP;
+        this.type = type;
         this.translated = translated;
         this.className = className;
         this.javaSignature = javaSignature;
@@ -130,19 +133,24 @@ public class CompileResponse implements PackableObject {
     }
 
     // for Package Spec
-    public CompileResponse(String translated, String className, Set<Dependency> dependencies) {
+    public CompileResponse(int type, String translated, String className, Set<Dependency> dependencies) {
+
+        assert type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC;
 
         this.errCode = 0;
-        this.type = CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC;
+        this.type = type;
         this.translated = translated;
         this.className = className;
         this.dependencies = dependencies;
     }
 
     // for Package Body
-    public CompileResponse() {
+    public CompileResponse(int type) {
+
+        assert type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_BODY;
+
         errCode = 0;
-        this.type = CompileRequest.PLCSQL_COMPILE_TYPE_PKG_BODY;
+        this.type = type;
     }
 
     @Override

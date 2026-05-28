@@ -1090,7 +1090,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
         String wrapperParam = getCallWrapperParam(paramSize, node.args, node.decl.paramList);
         LocalCallCodeSnippets code =
                 getLocalCallCodeSnippets(paramSize, node.args, node.decl.paramList);
-        String block = node.prefixDeclBlock ? node.decl.scope().block + "." : "";
+        String block = node.prefixDeclBlock ? node.decl.scope.block + "." : "";
 
         CodeTemplate tmpl =
                 new CodeTemplate(
@@ -2444,7 +2444,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
         String wrapperParam = getCallWrapperParam(paramSize, node.args, node.decl.paramList);
         LocalCallCodeSnippets code =
                 getLocalCallCodeSnippets(paramSize, node.args, node.decl.paramList);
-        String block = node.prefixDeclBlock ? node.decl.scope().block + "." : "";
+        String block = node.prefixDeclBlock ? node.decl.scope.block + "." : "";
 
         return Misc.isEmpty(node.decl.paramList)
                 ? new CodeTemplate(
@@ -2534,7 +2534,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
         if (node.exName == null) {
             code = "throw e" + node.exHandlerDepth + ";";
         } else {
-            String block = node.exName.prefixDeclBlock ? node.exName.decl.scope().block + "." : "";
+            String block = node.exName.prefixDeclBlock ? node.exName.decl.scope.block + "." : "";
             code = String.format("throw %s new %s();", block, node.exName.name);
         }
 
@@ -2703,7 +2703,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
             if ("OTHERS".equals(ex.name)) {
                 sbuf.append("PlcsqlRuntimeError");
             } else if (ex.prefixDeclBlock) {
-                sbuf.append("Decl_of_" + ex.decl.scope().block + "." + ex.name);
+                sbuf.append("Decl_of_" + ex.decl.scope.block + "." + ex.name);
             } else {
                 sbuf.append(ex.name);
             }
@@ -2907,7 +2907,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                 if (e instanceof ExprId) {
                     ExprId var = (ExprId) e;
                     assert var.decl != null;
-                    var.prefixDeclBlock = var.decl.scope().declDone;
+                    var.prefixDeclBlock = var.decl.scope.declDone;
                 }
                 ret.addElement((CodeTemplate) visit(e));
             }

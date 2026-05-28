@@ -156,6 +156,11 @@ public abstract class DeclRoutine extends Decl {
         this.body = body;
     }
 
+    @Override
+    public boolean lackOfBody() {
+        return body == null && bodyDecl == null;
+    }
+
     public boolean hasTimestampParam() {
 
         if (paramList != null) {

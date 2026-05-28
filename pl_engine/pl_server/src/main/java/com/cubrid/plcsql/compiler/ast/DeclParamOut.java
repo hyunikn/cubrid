@@ -56,6 +56,16 @@ public class DeclParamOut extends DeclParam {
         return "out-parameter";
     }
 
+    @Override
+    public boolean equals(Object o) {
+        if (o == null || o.getClass() != DeclParamOut.class) {
+            return false;
+        }
+
+        DeclParamOut other = (DeclParamOut) o;
+        return this.name.equals(other.name) && this.typeSpec.type == other.typeSpec.type && this.alsoIn == other.alsoIn;
+    }
+
     public String toJavaSignature() {
         return String.format("%s[]", typeSpec.type.fullJavaType);
     }

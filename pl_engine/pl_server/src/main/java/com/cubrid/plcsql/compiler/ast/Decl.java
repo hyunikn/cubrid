@@ -36,6 +36,7 @@ import org.antlr.v4.runtime.ParserRuleContext;
 public abstract class Decl extends AstNode {
 
     public Scope scope;
+    public Decl bodyDecl;
 
     public abstract String kind();
 
@@ -47,7 +48,21 @@ public abstract class Decl extends AstNode {
         this.scope = scope;
     }
 
-    public Scope scope() {
-        return scope;
+    public void setBodyDecl(Decl bodyDecl) {
+        this.bodyDecl = bodyDecl;
+    }
+
+    public boolean isBodyDeclOf(Decl other) {
+        // by default false
+        // DeclCursor, DeclFunc, DeclProc will override this default
+        return false;
+
+    }
+
+    public boolean lackOfBody() {
+        // by default false
+        // DeclCursor, DeclRoutine will override this default
+        return false;
+
     }
 }

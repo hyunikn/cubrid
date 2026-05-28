@@ -30,6 +30,7 @@
 
 package com.cubrid.plcsql.compiler.ast;
 
+import com.cubrid.jsp.data.CompileResponse;
 import com.cubrid.plcsql.compiler.Scope;
 import org.antlr.v4.runtime.ParserRuleContext;
 
@@ -63,6 +64,11 @@ public abstract class Decl extends AstNode {
         // by default false
         // DeclCursor, DeclRoutine will override this default
         return false;
+    }
 
+    public void addToCompileResponse(CompileResponse resp) {
+        // by default, unreachable
+        // declarations which can be a package item will properly override this method
+        assert false;
     }
 }

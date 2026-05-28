@@ -74,19 +74,13 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
     public final SymbolStack symbolStack = new SymbolStack();
     public final Set<Dependency> dependencies = new HashSet<>();
+    public NodeList<Decl> pkgSpecItems;
 
     public ParseTreeConverter(InstanceStore iStore, String spOwner, String revision) {
         this.iStore = iStore;
         this.spOwner = Misc.getNormalizedText(spOwner);
         this.revision = revision;
         this.sqlSerialNo = 1;
-    }
-
-    public void fillPkgSpecIntoResponse(CompileResponse resp) {
-
-        for (Decl d: pkgSpecItems.nodes) {
-            // TODO package
-        }
     }
 
     public UnitPkg convertPackageCode(ParseTree specTree, ParseTree bodyTree) {
@@ -97,6 +91,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         Create_package_specContext cpsContext = specContext.create_package_spec();
         assert cpsContext != null;
 
+        // check name and label
         String name = Misc.getNormalizedText(cpsContext.uniq_name().name);
         if (cpsContext.label_name() != null) {
             String labelInSpec = Misc.getNormalizedText(cpsContext.label_name());
@@ -119,6 +114,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
             Create_package_bodyContext cpbContext = bodyContext.create_package_body();
             assert cpbContext != null;
 
+            // check name and label
             String nameInBody = Misc.getNormalizedText(cpsContext.uniq_name().name);
             assert name == nameInBody;
             if (cpbContext.label_name() != null) {
@@ -495,8 +491,6 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
     @Override
     public TypeSpec visitPercent_rowtype(Percent_rowtypeContext ctx) {
 
-        List<Misc.Pair<String, Type>> selectList = null;
-
         String row = Misc.getNormalizedText(ctx.row_name());
         if (row.indexOf(".") < 0) {
             // 'row' can be a cursor name
@@ -506,7 +500,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
             try {
                 id = visitNonFuncIdentifier(ctx.row_name().name);
                 if (id.decl instanceof DeclCursor) {
-                    selectList = ((DeclCursor) id.decl).staticSql.selectList;
+                    return new TypeSpec(ctx, ((DeclCursor) id.decl).recordTypeSpec.type);
                 } else {
                     throw new SemanticError(
                             Misc.getLineColumnOf(ctx), // s076
@@ -519,29 +513,27 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
             row = row.replaceAll(" ", ""); // it can have spaces
         }
 
-        if (selectList == null) {
-            // row can be a table name
-            List<SqlSemantics> answer =
-                    ServerAPI.getSqlSemantics(Arrays.asList("select * from " + row));
-            if (answer == null) {
-                throw new RuntimeException("internal error: failed to get the semantics of " + row);
-            }
-            assert answer.size() == 1;
+        // row can be a table name
+        List<SqlSemantics> answer =
+                ServerAPI.getSqlSemantics(Arrays.asList("select * from " + row));
+        if (answer == null) {
+            throw new RuntimeException("internal error: failed to get the semantics of " + row);
+        }
+        assert answer.size() == 1;
 
-            SqlSemantics sws = answer.get(0);
-            if (sws.errCode != 0) {
-                throw new SemanticError(
-                        Misc.getLineColumnOf(ctx), // s077
-                        row + " is neither a table nor a cursor");
-            }
-
-            StaticSql staticSql = checkAndConvertStaticSql(sws, ctx);
-            selectList = staticSql.selectList;
-            assert selectList != null;
-
-            dependencies.add(new Dependency(Dependency.OBJ_TYPE_TABLE, row, spOwner));
+        SqlSemantics sws = answer.get(0);
+        if (sws.errCode != 0) {
+            throw new SemanticError(
+                    Misc.getLineColumnOf(ctx), // s077
+                    row + " is neither a table nor a cursor");
         }
 
+        // row is a table
+        dependencies.add(new Dependency(Dependency.OBJ_TYPE_TABLE, row, spOwner));
+
+        StaticSql staticSql = checkAndConvertStaticSql(sws, ctx);
+        List<Misc.Pair<String, Type>> selectList = staticSql.selectList;
+        assert selectList != null;
         if (selectList.size() == 0) {
             throw new RuntimeException(row + " has no columns"); // unlikely ...
         }
@@ -1502,7 +1494,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
             SqlSemantics sws = sssMap.get(ctx);
             staticSql = checkAndConvertStaticSql(sws, ctx.static_sql());
             TypeRecord ty = TypeRecord.getInstance(iStore, name, staticSql.selectList);
-            recordTypeSpec = TypeSpec.getBogus(iStore, ty);
+            recordTypeSpec = new TypeSpec(ctx.static_sql(), ty);    // derived from the static sql
         } else {
             recordTypeSpec = (TypeSpec) visit(ctx.type_spec());
         }
@@ -2793,7 +2785,6 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
     // Private
     // --------------------------------------------------------
     //
-    private NodeList<Decl> pkgSpecItems;
 
     private Map<ParserRuleContext, SqlSemantics> sssMap = new HashMap<>();
 

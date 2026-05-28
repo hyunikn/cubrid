@@ -38,6 +38,7 @@ import com.cubrid.plcsql.compiler.antlrgen.PlcParser;
 import com.cubrid.plcsql.compiler.ast.Unit;
 import com.cubrid.plcsql.compiler.ast.UnitPkg;
 import com.cubrid.plcsql.compiler.ast.UnitSp;
+import com.cubrid.plcsql.compiler.ast.Decl;
 import com.cubrid.plcsql.compiler.ast.loopOpt.SqlUse;
 import com.cubrid.plcsql.compiler.error.SemanticError;
 import com.cubrid.plcsql.compiler.error.SyntaxError;
@@ -337,7 +338,11 @@ public class PlcsqlCompilerMain {
                     javaCode,
                     unitPkg.getClassName(),
                     typeChecker.dependencies);
-            converter.fillPkgSpecIntoResponse(resp);    // converter remembers package spec items
+
+            assert converter.pkgSpecItems != null;
+            for (Decl d: converter.pkgSpecItems.nodes) {
+                d.addToCompileResponse(resp);
+            }
 
             return resp;
         } else {

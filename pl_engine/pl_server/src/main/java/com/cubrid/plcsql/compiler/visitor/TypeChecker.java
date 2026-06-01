@@ -88,7 +88,10 @@ public class TypeChecker extends AstVisitor<Type> {
 
     @Override
     public Type visitDeclPackage(DeclPackage node) {
-        // TODO package
+        visitNodeList(node.pkgItems);
+        if (node.initializer != null) {
+            visitBody(node.initializer);
+        }
         return null;
     }
 

@@ -30,8 +30,6 @@
 
 package com.cubrid.plcsql.compiler.ast;
 
-import com.cubrid.plcsql.compiler.serverapi.ServerConstants;
-import com.cubrid.jsp.data.CompileResponse;
 import com.cubrid.plcsql.compiler.visitor.AstVisitor;
 import org.antlr.v4.runtime.ParserRuleContext;
 
@@ -91,15 +89,4 @@ public class DeclFunc extends DeclRoutine {
         return (this.body != null && other.body == null);
     }
 
-    @Override
-    public void addAsPkgItem(CompileResponse resp, String pkgClass) {
-        CompileResponse.PkgSp pkgSp = new CompileResponse.PkgSp(
-                pkgClass + "." + getJavaSignature(),
-                name,
-                ServerConstants.SP_TYPE_FUNCTION,
-                retTypeSpec.type.dbType,
-                directive,
-                sqlDataAccess,
-                null);   // comment todo
-    }
 }

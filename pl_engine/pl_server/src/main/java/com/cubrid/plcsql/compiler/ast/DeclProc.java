@@ -30,7 +30,6 @@
 
 package com.cubrid.plcsql.compiler.ast;
 
-import com.cubrid.jsp.data.CompileResponse;
 import com.cubrid.plcsql.compiler.visitor.AstVisitor;
 import org.antlr.v4.runtime.ParserRuleContext;
 
@@ -85,9 +84,5 @@ public class DeclProc extends DeclRoutine {
 
         // this must have a body and the other may not
         return (this.body != null && other.body == null);
-    }
-
-    @Override
-    public void addAsPkgItem(CompileResponse resp, String pkgClass) {
     }
 }

@@ -51,6 +51,6 @@ public class DeclException extends Decl {
     }
 
     @Override
-    public void addAsPkgItem(CompileResponse resp, String pkgClass) {
+    public void addAsPkgItem(CompileResponse resp) {
     }
 }

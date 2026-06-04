@@ -91,7 +91,7 @@ public abstract class Decl extends AstNode {
         return false;
     }
 
-    public void addAsPkgItem(CompileResponse resp, String pkgClass) {
+    public void addAsPkgItem(CompileResponse resp) {
         // by default, unreachable
         // declarations which can be a package item will properly override this method
         assert false;

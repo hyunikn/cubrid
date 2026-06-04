@@ -30,6 +30,8 @@
 
 package com.cubrid.plcsql.compiler.ast;
 
+import com.cubrid.jsp.data.CompileResponse;
+import com.cubrid.plcsql.compiler.serverapi.ServerConstants;
 import com.cubrid.plcsql.compiler.ast.loopOpt.LocalRoutineCall;
 import com.cubrid.plcsql.compiler.ast.loopOpt.SqlUse;
 import com.cubrid.plcsql.compiler.type.Type;
@@ -213,5 +215,18 @@ public abstract class DeclRoutine extends Decl {
 
     public boolean isProcedure() {
         return (retTypeSpec == null);
+    }
+
+    @Override
+    public void addAsPkgItem(CompileResponse resp) {
+
+        CompileResponse.PkgSp pkgSp = new CompileResponse.PkgSp(
+                getJavaSignature(),
+                name,
+                isProcedure() ? ServerConstants.SP_TYPE_PROCEDURE : ServerConstants.SP_TYPE_FUNCTION,
+                isProcedure() ? 0 : retTypeSpec.type.dbType,
+                directive,
+                sqlDataAccess,
+                comment);
     }
 }

@@ -64,6 +64,6 @@ public class DeclConst extends DeclIdTypeDeclared {
     }
 
     @Override
-    public void addAsPkgItem(CompileResponse resp, String pkgClass) {
+    public void addAsPkgItem(CompileResponse resp) {
     }
 }

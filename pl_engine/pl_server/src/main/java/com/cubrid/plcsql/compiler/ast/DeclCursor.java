@@ -105,7 +105,7 @@ public class DeclCursor extends DeclId {
     }
 
     @Override
-    public void addAsPkgItem(CompileResponse resp, String pkgClass) {
+    public void addAsPkgItem(CompileResponse resp) {
     }
 
     // --------------------------------------------------

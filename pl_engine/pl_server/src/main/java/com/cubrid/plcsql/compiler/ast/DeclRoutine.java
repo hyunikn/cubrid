@@ -39,6 +39,9 @@ import org.antlr.v4.runtime.ParserRuleContext;
 
 public abstract class DeclRoutine extends Decl {
 
+    public static final int DIRECTIVE_AUTHID_CALLER = 1;
+    public static final int DIRECTIVE_DETERMINISTIC = (1 << 1);
+
     // not contained in a loop but reachable from it including the case of (mutually) recursive
     // calls
     public boolean calledFromLoop;
@@ -134,6 +137,7 @@ public abstract class DeclRoutine extends Decl {
     public final String name;
     public StmtLoop.LoopOptimizables loopOptimizables;
     public final NodeList<DeclParam> paramList;
+    public final int directive;
     public final TypeSpec retTypeSpec;
     public NodeList<Decl> decls;
     public Body body;
@@ -143,6 +147,7 @@ public abstract class DeclRoutine extends Decl {
             String name,
             StmtLoop.LoopOptimizables loopOptimizables,
             NodeList<DeclParam> paramList,
+            int directive,
             TypeSpec retTypeSpec,
             NodeList<Decl> decls,
             Body body) {
@@ -151,9 +156,37 @@ public abstract class DeclRoutine extends Decl {
         this.name = name;
         this.loopOptimizables = loopOptimizables;
         this.paramList = paramList;
+        this.directive = directive;
         this.retTypeSpec = retTypeSpec;
         this.decls = decls;
         this.body = body;
+    }
+
+    public String getJavaSignature() {
+        String ret;
+        if (paramList == null) {
+            ret = String.format("%s()", name);
+        } else {
+            boolean first = true;
+            StringBuffer sbuf = new StringBuffer();
+            for (DeclParam dp : paramList.nodes) {
+                if (first) {
+                    first = false;
+                } else {
+                    sbuf.append(",");
+                }
+
+                sbuf.append(dp.toJavaSignature());
+            }
+
+            ret = String.format("%s(%s)", name, sbuf.toString());
+        }
+
+        if (retTypeSpec == null) {
+            return ret;
+        } else {
+            return (ret + " return " + retTypeSpec.type.fullJavaType);
+        }
     }
 
     @Override

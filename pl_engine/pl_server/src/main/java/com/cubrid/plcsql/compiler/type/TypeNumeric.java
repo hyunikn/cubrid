@@ -30,6 +30,7 @@
 
 package com.cubrid.plcsql.compiler.type;
 
+import com.cubrid.jsp.data.DBType;
 import com.cubrid.plcsql.compiler.InstanceStore;
 
 public class TypeNumeric extends Type {
@@ -69,7 +70,7 @@ public class TypeNumeric extends Type {
                 IDX_NUMERIC,
                 getPlcName(precision, scale),
                 "java.math.BigDecimal",
-                getTypicalValueStr(precision, scale));
+                getTypicalValueStr(precision, scale), DBType.DB_NUMERIC);
         this.precision = precision;
         this.scale = scale;
     }

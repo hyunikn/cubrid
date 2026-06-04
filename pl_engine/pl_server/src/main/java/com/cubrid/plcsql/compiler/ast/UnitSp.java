@@ -56,31 +56,7 @@ public class UnitSp extends Unit {
     }
 
     public String getJavaSignature() {
-
-        String ret;
-        if (routine.paramList == null) {
-            ret = String.format("%s.%s()", getClassName(), routine.name);
-        } else {
-            boolean first = true;
-            StringBuffer sbuf = new StringBuffer();
-            for (DeclParam dp : routine.paramList.nodes) {
-                if (first) {
-                    first = false;
-                } else {
-                    sbuf.append(", ");
-                }
-
-                sbuf.append(dp.toJavaSignature());
-            }
-
-            ret = String.format("%s.%s(%s)", getClassName(), routine.name, sbuf.toString());
-        }
-
-        if (routine.isProcedure()) {
-            return ret;
-        } else {
-            return (ret + " return " + routine.retTypeSpec.type.fullJavaType);
-        }
+        return String.format("%s.%s", getClassName(), routine.getJavaSignature());
     }
 
     public String getClassName() {

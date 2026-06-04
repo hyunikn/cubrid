@@ -30,6 +30,8 @@
 
 package com.cubrid.plcsql.compiler.ast;
 
+import com.cubrid.plcsql.compiler.serverapi.ServerConstants;
+import com.cubrid.jsp.data.CompileResponse;
 import com.cubrid.plcsql.compiler.visitor.AstVisitor;
 import org.antlr.v4.runtime.ParserRuleContext;
 
@@ -45,10 +47,11 @@ public class DeclFunc extends DeclRoutine {
             String name,
             StmtLoop.LoopOptimizables loopOptimizables,
             NodeList<DeclParam> paramList,
+            int directive,
             TypeSpec retTypeSpec,
             NodeList<Decl> decls,
             Body body) {
-        super(ctx, name, loopOptimizables, paramList, retTypeSpec, decls, body);
+        super(ctx, name, loopOptimizables, paramList, directive, retTypeSpec, decls, body);
     }
 
     public DeclFunc(
@@ -56,8 +59,9 @@ public class DeclFunc extends DeclRoutine {
             String name,
             StmtLoop.LoopOptimizables loopOptimizables,
             NodeList<DeclParam> paramList,
+            int directive,
             TypeSpec retTypeSpec) {
-        super(ctx, name, loopOptimizables, paramList, retTypeSpec, null, null);
+        super(ctx, name, loopOptimizables, paramList, directive, retTypeSpec, null, null);
     }
 
     @Override
@@ -85,4 +89,15 @@ public class DeclFunc extends DeclRoutine {
         return (this.body != null && other.body == null);
     }
 
+    @Override
+    public void addAsPkgItem(CompileResponse resp, String pkgClass) {
+        CompileResponse.PkgSp pkgSp = new CompileResponse.PkgSp(
+                pkgClass + "." + getJavaSignature(),
+                name,
+                ServerConstants.SP_TYPE_FUNCTION,
+                retTypeSpec.type.dbType,
+                directive,
+                0, // sqlDataAccess todo
+                null);   // comment todo
+    }
 }

@@ -30,6 +30,7 @@
 
 package com.cubrid.plcsql.compiler.ast;
 
+import com.cubrid.jsp.data.CompileResponse;
 import com.cubrid.plcsql.compiler.visitor.AstVisitor;
 import org.antlr.v4.runtime.ParserRuleContext;
 
@@ -45,17 +46,19 @@ public class DeclProc extends DeclRoutine {
             String name,
             StmtLoop.LoopOptimizables loopOptimizables,
             NodeList<DeclParam> paramList,
+            int directive,
             NodeList<Decl> decls,
             Body body) {
-        super(ctx, name, loopOptimizables, paramList, null, decls, body);
+        super(ctx, name, loopOptimizables, paramList, directive, null, decls, body);
     }
 
     public DeclProc(
             ParserRuleContext ctx,
             String name,
             StmtLoop.LoopOptimizables loopOptimizables,
-            NodeList<DeclParam> paramList) {
-        super(ctx, name, loopOptimizables, paramList, null, null, null);
+            NodeList<DeclParam> paramList,
+            int directive) {
+        super(ctx, name, loopOptimizables, paramList, directive, null, null, null);
     }
 
     @Override
@@ -80,5 +83,9 @@ public class DeclProc extends DeclRoutine {
 
         // this must have a body and the other may not
         return (this.body != null && other.body == null);
+    }
+
+    @Override
+    public void addAsPkgItem(CompileResponse resp, String pkgClass) {
     }
 }

@@ -30,6 +30,7 @@
 
 package com.cubrid.plcsql.compiler.ast;
 
+import com.cubrid.jsp.data.CompileResponse;
 import com.cubrid.plcsql.compiler.visitor.AstVisitor;
 import org.antlr.v4.runtime.ParserRuleContext;
 
@@ -51,5 +52,9 @@ public class DeclException extends Decl {
     @Override
     public String kind() {
         return "exception";
+    }
+
+    @Override
+    public void addAsPkgItem(CompileResponse resp, String pkgClass) {
     }
 }

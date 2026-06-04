@@ -83,59 +83,54 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         this.sqlSerialNo = 1;
     }
 
+    private void checkLabel(String name, ParserRuleContext labelCtx) {
+        String label = Misc.getNormalizedText(labelCtx);
+        if (!name.equals(label)) {
+            throw new SemanticError(
+                    Misc.getLineColumnOf(labelCtx),
+                    "label does not match the package name " + name);
+        }
+    }
+
     public UnitPkg convertPackageCode(ParseTree specTree, ParseTree bodyTree) {
 
         symbolStack.pushSymbolTable("package", null);
 
-        Sql_scriptContext specContext = (Sql_scriptContext) specTree;
-        Create_package_specContext cpsContext = specContext.create_package_spec();
-        assert cpsContext != null;
+        Create_package_specContext specContext = ((Sql_scriptContext) specTree).create_package_spec();
+        assert specContext != null;
 
         // check name and label
-        String name = Misc.getNormalizedText(cpsContext.uniq_name().name);
-        if (cpsContext.label_name() != null) {
-            String labelInSpec = Misc.getNormalizedText(cpsContext.label_name());
-            if (!name.equals(labelInSpec)) {
-                throw new SemanticError(
-                        Misc.getLineColumnOf(cpsContext.label_name()),
-                        "label does not match the package name " + name); // s105
-            }
+        String name = Misc.getNormalizedText(specContext.uniq_name().name);
+        if (specContext.label_name() != null) {
+            checkLabel(name, specContext.label_name()); // s105
         }
 
         // visit package spec items
         topLevelStmt = CREATE_PKG_SPEC;
-        pkgSpecItems = visitSeq_of_declare_specs(cpsContext.seq_of_declare_specs());
+        pkgSpecItems = visitSeq_of_declare_specs(specContext.seq_of_declare_specs());
 
-        Body body = null;
+        Body initializer = null;
         NodeList<Decl> pkgBodyItems = null;
         if (bodyTree != null) {
 
-            Sql_scriptContext bodyContext = (Sql_scriptContext) bodyTree;
-            Create_package_bodyContext cpbContext = bodyContext.create_package_body();
-            assert cpbContext != null;
+            Create_package_bodyContext bodyContext = ((Sql_scriptContext) bodyTree).create_package_body();
+            assert bodyContext != null;
 
             // check name and label
-            String nameInBody = Misc.getNormalizedText(cpsContext.uniq_name().name);
+            String nameInBody = Misc.getNormalizedText(bodyContext.uniq_name().name);
             assert name == nameInBody;
-            if (cpbContext.label_name() != null) {
-                String labelInBody = Misc.getNormalizedText(cpbContext.label_name());
-                if (!name.equals(labelInBody)) {
-                    throw new SemanticError(
-                            Misc.getLineColumnOf(cpbContext.label_name()),
-                            "label does not match the package name " + name); // s106
-                }
+            if (bodyContext.label_name() != null) {
+                checkLabel(name, bodyContext.label_name()); // s106
             }
 
             // visit package body items
             topLevelStmt = CREATE_PKG_BODY;
-            pkgBodyItems = visitSeq_of_declare_specs(cpsContext.seq_of_declare_specs());
+            pkgBodyItems = visitSeq_of_declare_specs(bodyContext.seq_of_declare_specs());
 
-            if (cpbContext.body() != null) {
-                body = visitBody(cpbContext.body());
-                if (body.label != null && !body.label.equals(name)) {
-                    throw new SemanticError(
-                            Misc.getLineColumnOf(cpbContext.body().label_name()),
-                            "label does not match the package name " + name); // s096
+            if (bodyContext.body() != null) {
+                initializer = visitBody(bodyContext.body());
+                if (bodyContext.body().label_name() != null) {
+                    checkLabel(name, bodyContext.body().label_name()); // s096
                 }
             }
         }
@@ -153,7 +148,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
             pkgItems.nodes.addAll(pkgBodyItems.nodes);
         }
 
-        DeclPackage declPkg = new DeclPackage(specContext, name, pkgItems, body);
+        DeclPackage declPkg = new DeclPackage(specContext, name, pkgItems, initializer);
         // package is not put into the symbol table because it is never referenced in its own definition,
         // but its scope must be set as other declarations
         declPkg.setScope(symbolStack.getCurrentScope());
@@ -221,7 +216,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                                     + " must be updatable because it is to an OUT parameter");
                 }
 
-                gpc.decl = new DeclProc(null, ps.name, null, paramList);
+                gpc.decl = new DeclProc(null, ps.name, null, paramList, ps.directive);
 
             } else if (q instanceof ServerAPI.FunctionSignature) {
                 ServerAPI.FunctionSignature fs = (ServerAPI.FunctionSignature) q;
@@ -267,7 +262,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
                 gfc.decl =
                         new DeclFunc(
-                                null, fs.name, null, paramList, TypeSpec.getBogus(iStore, retType));
+                                null, fs.name, null, paramList, fs.directive, TypeSpec.getBogus(iStore, retType));
 
             } else if (q instanceof ServerAPI.SerialOrNot) {
 
@@ -1334,14 +1329,6 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         return new ExprSqlErrm(ctx, exHandlerDepth);
     }
 
-    /* TODO: restore later
-    @Override
-    public Expr visitList_exp(List_expContext ctx) {
-        NodeList<Expr> elems = visitExpressions(ctx.expressions());
-        return new ExprList(ctx, elems);
-    }
-     */
-
     @Override
     public NodeList<Decl> visitSeq_of_declare_specs(Seq_of_declare_specsContext ctx) {
 
@@ -1732,6 +1719,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                                     name,
                                     null,
                                     EMPTY_PARAMS,
+                                    0,
                                     TypeSpec.getBogus(iStore, retType));
                     ret = egfc;
                 }
@@ -3033,6 +3021,18 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
             NodeList<DeclParam> paramList = visitParameter_list(ctx.parameter_list());
             symbolStack.popSymbolTable();
 
+            int directive = 0;
+            {
+                // authid
+                if (ctx.authid_spec() != null && ctx.authid_spec().authid_caller() != null) {
+                    directive |= DeclRoutine.DIRECTIVE_AUTHID_CALLER;
+                }
+                // deterministic or not
+                if (ctx.deterministic_spec() != null && ctx.deterministic_spec().NOT() == null) {
+                    directive |= DeclRoutine.DIRECTIVE_DETERMINISTIC;
+                }
+            }
+
             if (ctx.PROCEDURE() == null) {
                 // function
                 if (ctx.RETURN() == null) {
@@ -3060,7 +3060,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                     }
                 }
                 DeclFunc ret =
-                        new DeclFunc(ctx, name, routineLoopOptimizables, paramList, retTypeSpec);
+                        new DeclFunc(ctx, name, routineLoopOptimizables, paramList, directive, retTypeSpec);
                 symbolStack.putDecl(name, ret);
                 if (store != null) {
                     store.put(name, ret);
@@ -3072,7 +3072,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                             Misc.getLineColumnOf(ctx), // s051
                             "procedure " + name + " may not specify a return type");
                 }
-                DeclProc ret = new DeclProc(ctx, name, routineLoopOptimizables, paramList);
+                DeclProc ret = new DeclProc(ctx, name, routineLoopOptimizables, paramList, directive);
                 symbolStack.putDecl(name, ret);
                 if (store != null) {
                     store.put(name, ret);

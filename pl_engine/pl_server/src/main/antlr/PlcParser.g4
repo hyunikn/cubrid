@@ -85,8 +85,16 @@ parameter
     ;
 
 authid_spec
-    : AUTHID (DEFINER | OWNER)                          # authid_owner
-    | AUTHID (CALLER | CURRENT_USER)                    # authid_caller
+    : authid_owner
+    | authid_caller
+    ;
+
+authid_owner
+    : AUTHID (DEFINER | OWNER)
+    ;
+
+authid_caller
+    : AUTHID (CALLER | CURRENT_USER)
     ;
 
 deterministic_spec

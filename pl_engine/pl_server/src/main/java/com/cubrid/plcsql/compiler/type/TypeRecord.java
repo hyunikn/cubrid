@@ -76,7 +76,7 @@ public class TypeRecord extends Type {
     }
 
     private TypeRecord(String name, int seq, List<Misc.Pair<String, Type>> selectList) {
-        super(IDX_RECORD, getPlcName(name + seq), getJavaName(name + seq), null);
+        super(IDX_RECORD, getPlcName(name + seq), getJavaName(name + seq), null, -1);
         this.name = name;
         this.selectList = selectList;
     }

@@ -333,15 +333,16 @@ public class PlcsqlCompilerMain {
                     typeChecker.dependencies);
         } else if (type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC) {
 
+            String pkgClassName = unitPkg.getClassName();
             CompileResponse resp = new CompileResponse(
                     CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC,
                     javaCode,
-                    unitPkg.getClassName(),
+                    pkgClassName,
                     typeChecker.dependencies);
 
             assert converter.pkgSpecItems != null;
             for (Decl d: converter.pkgSpecItems.nodes) {
-                d.addToCompileResponse(resp);
+                d.addAsPkgItem(resp, pkgClassName);
             }
 
             return resp;

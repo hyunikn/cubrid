@@ -32,6 +32,10 @@ package com.cubrid.plcsql.compiler.serverapi;
 
 public class ServerConstants {
 
+    //
+    public static final int SP_TYPE_PROCEDURE = 1;
+    public static final int SP_TYPE_FUNCTION = 2;
+
     // kinds of SQL statements that are supported in Static SQL
     public static final int CUBRID_STMT_INSERT = 20; // REPLACE too
     public static final int CUBRID_STMT_SELECT = 21;

@@ -29,6 +29,7 @@
  */
 package com.cubrid.plcsql.compiler.ast;
 
+import com.cubrid.jsp.data.CompileResponse;
 import com.cubrid.plcsql.compiler.StaticSql;
 import com.cubrid.plcsql.compiler.type.Type;
 import com.cubrid.plcsql.compiler.visitor.AstVisitor;
@@ -107,6 +108,10 @@ public class DeclCursor extends DeclId {
     @Override
     public String kind() {
         return "cursor";
+    }
+
+    @Override
+    public void addAsPkgItem(CompileResponse resp, String pkgClass) {
     }
 
     // --------------------------------------------------

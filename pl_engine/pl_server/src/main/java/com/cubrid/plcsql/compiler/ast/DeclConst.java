@@ -30,6 +30,7 @@
 
 package com.cubrid.plcsql.compiler.ast;
 
+import com.cubrid.jsp.data.CompileResponse;
 import com.cubrid.plcsql.compiler.visitor.AstVisitor;
 import org.antlr.v4.runtime.ParserRuleContext;
 
@@ -67,5 +68,9 @@ public class DeclConst extends DeclIdTypeSpeced {
     @Override
     public String kind() {
         return "constant";
+    }
+
+    @Override
+    public void addAsPkgItem(CompileResponse resp, String pkgClass) {
     }
 }

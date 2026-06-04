@@ -410,6 +410,7 @@ public class SymbolStack {
 
                         // data type casting
                         "CAST",
+                        "COLLECTION_TO_STRING",
                         "DATE_FORMAT",
                         "FORMAT",
                         "STR_TO_DATE",
@@ -472,6 +473,10 @@ public class SymbolStack {
                         "DBTIMEZONE",
                         "DEFAULT",
                         "DISK_SIZE",
+                        "ESTIMATED_AVG_ROW_LENGTH",
+                        "ESTIMATED_DATA_FREE",
+                        "ESTIMATED_DATA_LENGTH",
+                        "ESTIMATED_TABLE_ROWS",
                         "INDEX_CARDINALITY",
                         "INET_ATON",
                         "INET_NTOA",

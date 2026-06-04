@@ -973,10 +973,11 @@ jsp_default_value_string (PARSER_CONTEXT *parser, PT_NODE *node, bool &is_null, 
 	{
 	  if (TP_IS_CHAR_TYPE (db_value_domain_type (value)))
 	    {
-	      if (db_get_string_size (value) > 255)
+	      if (db_get_string_size (value) > DB_MAX_DEFAULT_EXPR_LENGTH)
 		{
 		  pt_reset_error (parser);
-		  PT_ERRORm (parser, default_value, MSGCAT_SET_PARSER_SEMANTIC, MSGCAT_SEMANTIC_SP_PARAM_DEFAULT_STR_TOO_BIG);
+		  PT_ERRORmf (parser, default_value, MSGCAT_SET_PARSER_SEMANTIC, MSGCAT_SEMANTIC_SP_PARAM_DEFAULT_STR_TOO_BIG,
+			      DB_MAX_DEFAULT_EXPR_LENGTH);
 		  return ER_SP_PARAM_DEFAULT_STR_TOO_BIG;
 		}
 
@@ -1108,7 +1109,7 @@ jsp_set_pkg_scode_body (const char *unique_name, const char *scode_body)
 	  goto cleanup0;
 	}
 
-      obt = dbt_create_object_internal (classobj);      // side effect 1
+      obt = dbt_create_object_internal (classobj, false);      // side effect 1
       if (obt == NULL)
 	{
 	  ASSERT_ERROR_AND_SET (err);
@@ -1588,7 +1589,7 @@ sp_add_pkg_code (MOP *mop_out, const char *pkg_unique_name, const char *class_na
 	    goto error;
 	  }
 
-	obt = dbt_create_object_internal (classobj);
+	obt = dbt_create_object_internal (classobj, false);
 	if (!obt)
 	  {
 	    ASSERT_ERROR_AND_SET (err);
@@ -1705,7 +1706,7 @@ sp_add_pkg_sp_arg (MOP *mop_out, const int idx, const cubpl::pkg_sp_arg arg)
       goto error;
     }
 
-  obt = dbt_create_object_internal (classobj);
+  obt = dbt_create_object_internal (classobj, false);
   if (!obt)
     {
       ASSERT_ERROR_AND_SET (err);
@@ -1829,7 +1830,7 @@ sp_add_pkg_sp (MOP *mop_out, MOP owner, DB_VALUE &current_datetime,
       goto error;
     }
 
-  obt = dbt_create_object_internal (classobj);
+  obt = dbt_create_object_internal (classobj, false);
   if (!obt)
     {
       ASSERT_ERROR_AND_SET (err);
@@ -2138,7 +2139,7 @@ sp_add_pkg_var (MOP *mop_out, const char *pkg_unique_name, const cubpl::pkg_var 
       goto error;
     }
 
-  obt = dbt_create_object_internal (classobj);
+  obt = dbt_create_object_internal (classobj, false);
   if (!obt)
     {
       ASSERT_ERROR_AND_SET (err);
@@ -2258,7 +2259,7 @@ sp_add_pkg_exception (MOP *mop_out, const char *pkg_unique_name,
       goto error;
     }
 
-  obt = dbt_create_object_internal (classobj);
+  obt = dbt_create_object_internal (classobj, false);
   if (!obt)
     {
       ASSERT_ERROR_AND_SET (err);
@@ -2336,7 +2337,7 @@ sp_add_pkg_cursor (MOP *mop_out, const char *pkg_unique_name, const cubpl::pkg_c
       goto error;
     }
 
-  obt = dbt_create_object_internal (classobj);
+  obt = dbt_create_object_internal (classobj, false);
   if (!obt)
     {
       ASSERT_ERROR_AND_SET (err);
@@ -2461,7 +2462,7 @@ sp_add_pkg_rec_type (MOP *mop_out, const char *pkg_unique_name,
       goto error;
     }
 
-  obt = dbt_create_object_internal (classobj);
+  obt = dbt_create_object_internal (classobj, false);
   if (!obt)
     {
       ASSERT_ERROR_AND_SET (err);
@@ -2592,7 +2593,7 @@ sp_add_pkg_and_related (const char *unique_name, const char *owner_name, MOP own
       goto cleanup1;
     }
 
-  obt = dbt_create_object_internal (classobj);
+  obt = dbt_create_object_internal (classobj, false);
   if (!obt)
     {
       ASSERT_ERROR_AND_SET (err);
@@ -3497,10 +3498,12 @@ jsp_create_stored_procedure (PARSER_CONTEXT *parser, PT_NODE *statement)
 			   NULL);
 	  goto error_exit;
 	}
+      sp_info.sql_data_access = (SP_SQL_DATA_ACCESS_TYPE) pl_sp_compile_response.sql_data_access;
     }
   else				/* SP_LANG_JAVA */
     {
       decl = (const char *) PT_NODE_SP_JAVA_METHOD (statement);
+      sp_info.sql_data_access = SP_SQL_TYPE_UNKNOWN;
     }
 
   if (decl)

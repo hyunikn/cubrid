@@ -43,7 +43,6 @@ public class DeclCursor extends DeclId {
         return visitor.visitDeclCursor(this);
     }
 
-    public final String name;
     public final NodeList<DeclParamIn> paramList;
     public final TypeSpec recordTypeSpec;
     public final StaticSql staticSql;
@@ -54,13 +53,13 @@ public class DeclCursor extends DeclId {
     public DeclCursor(
             ParserRuleContext ctx,
             String name,
+            String comment,
             NodeList<DeclParamIn> paramList,
             TypeSpec recordTypeSpec,
             StaticSql staticSql) {
-        super(ctx);
+        super(ctx, name, comment);
 
         assert paramList != null;
-        this.name = name;
         this.paramList = paramList;
         this.recordTypeSpec = recordTypeSpec;
         this.staticSql = staticSql;
@@ -98,11 +97,6 @@ public class DeclCursor extends DeclId {
     @Override
     public Type type() {
         return Type.CURSOR;
-    }
-
-    @Override
-    public String name() {
-        return name;
     }
 
     @Override

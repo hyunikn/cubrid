@@ -330,7 +330,7 @@ public class PlcsqlCompilerMain {
                     javaCode,
                     unitSp.getClassName(),
                     unitSp.getJavaSignature(),
-                    converter.dataAccessLevel,
+                    unitSp.routine.sqlDataAccess,
                     typeChecker.dependencies);
         } else if (type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC) {
 

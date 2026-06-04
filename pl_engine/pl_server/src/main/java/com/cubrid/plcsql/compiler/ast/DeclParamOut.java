@@ -46,8 +46,8 @@ public class DeclParamOut extends DeclParam {
         return visitor.visitDeclParamOut(this);
     }
 
-    public DeclParamOut(ParserRuleContext ctx, String name, TypeSpec typeSpec, boolean alsoIn) {
-        super(ctx, name, typeSpec);
+    public DeclParamOut(ParserRuleContext ctx, String name, String comment, TypeSpec typeSpec, boolean alsoIn) {
+        super(ctx, name, comment, typeSpec);
         this.alsoIn = alsoIn;
     }
 

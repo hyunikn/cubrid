@@ -2254,7 +2254,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
         assert recTy instanceof TypeRecord;
 
         String[] recordSetArgs =
-                getRecordSetArgs(node.record.name(), (TypeRecord) recTy, node.record.scope.level);
+                getRecordSetArgs(node.record.name, (TypeRecord) recTy, node.record.scope.level);
         Object setUsedExpr = getSetUsedExpr(node.usedExprList);
 
         String[] template =
@@ -2277,7 +2277,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                         "%'+SET-USED-EXPR'%",
                         setUsedExpr,
                         "%'RECORD'%",
-                        node.record.name(),
+                        node.record.name,
                         "%'LABEL'%",
                         node.label == null ? "" : node.label + "_%'LEVEL'%:",
                         "%'+RECORD-FIELD-VALUES'%",
@@ -3227,7 +3227,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
 
             if (param instanceof DeclParamOut) {
                 ExprId id = (ExprId) args.nodes.get(i);
-                DeclIdTypeSpeced declId = (DeclIdTypeSpeced) id.decl;
+                DeclIdTypeDeclared declId = (DeclIdTypeDeclared) id.decl;
                 sbuf.append(String.format("%s[] o%d", getJavaCodeOfType(declId.typeSpec()), i));
             } else {
                 sbuf.append(String.format("%s o%d", getJavaCodeOfType(param.typeSpec), i));

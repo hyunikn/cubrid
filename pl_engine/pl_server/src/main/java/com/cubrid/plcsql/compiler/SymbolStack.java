@@ -108,6 +108,7 @@ public class SymbolStack {
                                     new DeclParamIn(
                                             null,
                                             "p" + i,
+                                            null, // comment
                                             TypeSpec.getBogus(null, paramType),
                                             null);
                             params.addNode(p);
@@ -123,7 +124,7 @@ public class SymbolStack {
                         // add op
                         DeclFunc op =
                                 new DeclFunc(
-                                        null, name, null, params, 0, TypeSpec.getBogus(null, retType));
+                                        null, name, null, null, params, 0, TypeSpec.getBogus(null, retType));
                         putOperator(name, op, opAnnot.coercionScheme());
                     }
                 }
@@ -136,7 +137,7 @@ public class SymbolStack {
         DeclProc dp;
 
         // disable
-        dp = new DeclProc(null, "DBMS_OUTPUT$DISABLE", null, new NodeList<DeclParam>(), 0);
+        dp = new DeclProc(null, "DBMS_OUTPUT$DISABLE", null, null, new NodeList<DeclParam>(), 0);
         putDeclTo(predefinedSymbols, "DBMS_OUTPUT$DISABLE", dp);
 
         // enable
@@ -145,11 +146,13 @@ public class SymbolStack {
                         null,
                         "DBMS_OUTPUT$ENABLE",
                         null,
+                        null,
                         new NodeList<DeclParam>()
                                 .addNode(
                                         new DeclParamIn(
                                                 null,
                                                 "size",
+                                                null,
                                                 TypeSpec.getBogus(null, Type.INT),
                                                 new ExprUint(null, "20000", Type.INT))), 
                         0);
@@ -161,24 +164,27 @@ public class SymbolStack {
                         null,
                         "DBMS_OUTPUT$GET_LINE",
                         null,
+                        null,
                         new NodeList<DeclParam>()
                                 .addNode(
                                         new DeclParamOut(
                                                 null,
                                                 "line",
+                                                null,
                                                 TypeSpec.getBogus(null, Type.STRING_ANY),
                                                 false))
                                 .addNode(
                                         new DeclParamOut(
                                                 null,
                                                 "status",
+                                                null,
                                                 TypeSpec.getBogus(null, Type.INT),
                                                 true)),
                         0);
         putDeclTo(predefinedSymbols, "DBMS_OUTPUT$GET_LINE", dp);
 
         // new_line
-        dp = new DeclProc(null, "DBMS_OUTPUT$NEW_LINE", null, new NodeList<DeclParam>(), 0);
+        dp = new DeclProc(null, "DBMS_OUTPUT$NEW_LINE", null, null, new NodeList<DeclParam>(), 0);
         putDeclTo(predefinedSymbols, "DBMS_OUTPUT$NEW_LINE", dp);
 
         // put_line
@@ -187,11 +193,13 @@ public class SymbolStack {
                         null,
                         "DBMS_OUTPUT$PUT_LINE",
                         null,
+                        null,
                         new NodeList<DeclParam>()
                                 .addNode(
                                         new DeclParamIn(
                                                 null,
                                                 "s",
+                                                null,
                                                 TypeSpec.getBogus(null, Type.STRING_ANY),
                                                 null)),
                         0);
@@ -203,11 +211,13 @@ public class SymbolStack {
                         null,
                         "DBMS_OUTPUT$PUT",
                         null,
+                        null,
                         new NodeList<DeclParam>()
                                 .addNode(
                                         new DeclParamIn(
                                                 null,
                                                 "s",
+                                                null,
                                                 TypeSpec.getBogus(null, Type.STRING_ANY),
                                                 null)),
                         0);
@@ -513,7 +523,7 @@ public class SymbolStack {
         for (String s : funcNames) {
             DeclFunc df =
                     new DeclFunc(
-                            null, s, null, null, 0, null); // only name is used for builtin functions
+                            null, s, null, null, null, 0, null); // only name is used for builtin functions
             putDeclTo(predefinedSymbols, df.name, df);
         }
     }
@@ -535,7 +545,7 @@ public class SymbolStack {
                         "ZERO_DIVIDE");
 
         for (String s : predefinedExceptions) {
-            DeclException de = new DeclException(null, s);
+            DeclException de = new DeclException(null, s, null);
             putDeclTo(predefinedSymbols, de.name, de);
         }
     }

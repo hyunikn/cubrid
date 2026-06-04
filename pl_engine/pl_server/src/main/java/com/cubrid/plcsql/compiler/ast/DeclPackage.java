@@ -40,15 +40,13 @@ public class DeclPackage extends Decl {
         return visitor.visitDeclPackage(this);
     }
 
-    public final String name;
     public NodeList<Decl> pkgItems;
     public Body initializer;
 
     public DeclPackage(
-            ParserRuleContext ctx, String name, NodeList<Decl> pkgItems, Body initializer) {
-        super(ctx);
+            ParserRuleContext ctx, String name, String comment, NodeList<Decl> pkgItems, Body initializer) {
+        super(ctx, name, comment);
 
-        this.name = name;
         this.pkgItems = pkgItems;
         this.initializer = initializer;
     }

@@ -46,8 +46,8 @@ public class DeclParamIn extends DeclParam {
         return visitor.visitDeclParamIn(this);
     }
 
-    public DeclParamIn(ParserRuleContext ctx, String name, TypeSpec typeSpec, Expr defaultVal) {
-        super(ctx, name, typeSpec);
+    public DeclParamIn(ParserRuleContext ctx, String name, String comment, TypeSpec typeSpec, Expr defaultVal) {
+        super(ctx, name, comment, typeSpec);
         this.defaultVal = defaultVal;
     }
 

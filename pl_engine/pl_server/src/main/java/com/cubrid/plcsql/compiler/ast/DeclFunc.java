@@ -45,23 +45,25 @@ public class DeclFunc extends DeclRoutine {
     public DeclFunc(
             ParserRuleContext ctx,
             String name,
+            String comment,
             StmtLoop.LoopOptimizables loopOptimizables,
             NodeList<DeclParam> paramList,
             int directive,
             TypeSpec retTypeSpec,
             NodeList<Decl> decls,
             Body body) {
-        super(ctx, name, loopOptimizables, paramList, directive, retTypeSpec, decls, body);
+        super(ctx, name, comment, loopOptimizables, paramList, directive, retTypeSpec, decls, body);
     }
 
     public DeclFunc(
             ParserRuleContext ctx,
             String name,
+            String comment,
             StmtLoop.LoopOptimizables loopOptimizables,
             NodeList<DeclParam> paramList,
             int directive,
             TypeSpec retTypeSpec) {
-        super(ctx, name, loopOptimizables, paramList, directive, retTypeSpec, null, null);
+        super(ctx, name, comment, loopOptimizables, paramList, directive, retTypeSpec, null, null);
     }
 
     @Override
@@ -97,7 +99,7 @@ public class DeclFunc extends DeclRoutine {
                 ServerConstants.SP_TYPE_FUNCTION,
                 retTypeSpec.type.dbType,
                 directive,
-                0, // sqlDataAccess todo
+                sqlDataAccess,
                 null);   // comment todo
     }
 }

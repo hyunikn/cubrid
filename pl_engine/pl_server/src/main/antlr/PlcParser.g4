@@ -37,7 +37,7 @@ sql_script
     ;
 
 create_package_spec
-    : CREATE (OR_REPLACE)? PACKAGE uniq_name (IS | AS) seq_of_declare_specs END label_name? (SEMICOLON)?
+    : CREATE (OR_REPLACE)? PACKAGE uniq_name (IS | AS) seq_of_declare_specs END label_name? (COMMENT CHAR_STRING)? (SEMICOLON)?
     ;
 
 create_package_body

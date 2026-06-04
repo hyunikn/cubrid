@@ -134,26 +134,26 @@ public abstract class DeclRoutine extends Decl {
         return (loopOptimizables != null);
     }
 
-    public final String name;
     public StmtLoop.LoopOptimizables loopOptimizables;
     public final NodeList<DeclParam> paramList;
     public final int directive;
     public final TypeSpec retTypeSpec;
     public NodeList<Decl> decls;
     public Body body;
+    public int sqlDataAccess;
 
     public DeclRoutine(
             ParserRuleContext ctx,
             String name,
+            String comment,
             StmtLoop.LoopOptimizables loopOptimizables,
             NodeList<DeclParam> paramList,
             int directive,
             TypeSpec retTypeSpec,
             NodeList<Decl> decls,
             Body body) {
-        super(ctx);
+        super(ctx, name, comment);
 
-        this.name = name;
         this.loopOptimizables = loopOptimizables;
         this.paramList = paramList;
         this.directive = directive;

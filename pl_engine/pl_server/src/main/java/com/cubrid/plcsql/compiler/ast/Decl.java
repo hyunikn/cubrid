@@ -34,15 +34,40 @@ import com.cubrid.jsp.data.CompileResponse;
 import com.cubrid.plcsql.compiler.Scope;
 import org.antlr.v4.runtime.ParserRuleContext;
 
+/*
+ Decl
+    - DeclLabel
+    - DeclException
+    - DeclPacakge
+    - DeclRoutine
+        - DeclFunc
+        - DedlProc
+    - DeclId
+        - DeclDynamicRecord
+        - DeclForIter
+        - DeclIdTypeDeclared
+            - DeclParam
+                - DeclParamIn
+                - DeclParamOut
+            - DeclConst
+            - DeclVar
+        - DeclCursor
+
+ */
+
 public abstract class Decl extends AstNode {
 
+    public final String name;
+    public final String comment;
     public Scope scope;
     public Decl bodyDecl;
 
     public abstract String kind();
 
-    public Decl(ParserRuleContext ctx) {
+    public Decl(ParserRuleContext ctx, String name, String comment) {
         super(ctx);
+        this.name = name;
+        this.comment = comment;
     }
 
     public void setScope(Scope scope) {

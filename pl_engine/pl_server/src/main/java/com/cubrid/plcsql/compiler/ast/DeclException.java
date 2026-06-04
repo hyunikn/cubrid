@@ -41,12 +41,8 @@ public class DeclException extends Decl {
         return visitor.visitDeclException(this);
     }
 
-    public final String name;
-
-    public DeclException(ParserRuleContext ctx, String name) {
-        super(ctx);
-
-        this.name = name;
+    public DeclException(ParserRuleContext ctx, String name, String comment) {
+        super(ctx, name, comment);
     }
 
     @Override

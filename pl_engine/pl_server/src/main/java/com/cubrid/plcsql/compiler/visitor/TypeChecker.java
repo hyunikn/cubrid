@@ -567,8 +567,8 @@ public class TypeChecker extends AstVisitor<Type> {
 
     @Override
     public Type visitExprId(ExprId node) {
-        if (node.decl instanceof DeclIdTypeSpeced) {
-            return ((DeclIdTypeSpeced) node.decl).typeSpec().type;
+        if (node.decl instanceof DeclIdTypeDeclared) {
+            return ((DeclIdTypeDeclared) node.decl).typeSpec().type;
         } else if (node.decl instanceof DeclCursor) {
             return Type.CURSOR;
         } else if (node.decl instanceof DeclForIter) {

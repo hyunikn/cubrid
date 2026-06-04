@@ -32,27 +32,20 @@ package com.cubrid.plcsql.compiler.ast;
 
 import org.antlr.v4.runtime.ParserRuleContext;
 
-public abstract class DeclParam extends DeclIdTypeSpeced {
+public abstract class DeclParam extends DeclIdTypeDeclared {
 
     public abstract boolean hasDefault();
 
-    public final String name;
     public final TypeSpec typeSpec;
 
-    public DeclParam(ParserRuleContext ctx, String name, TypeSpec typeSpec) {
-        super(ctx);
-        this.name = name;
+    public DeclParam(ParserRuleContext ctx, String name, String comment, TypeSpec typeSpec) {
+        super(ctx, name, comment);
         this.typeSpec = typeSpec;
     }
 
     @Override
     public TypeSpec typeSpec() {
         return typeSpec;
-    }
-
-    @Override
-    public String name() {
-        return name;
     }
 
     abstract String toJavaSignature();

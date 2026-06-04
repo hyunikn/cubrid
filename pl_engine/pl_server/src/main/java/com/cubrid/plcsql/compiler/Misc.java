@@ -83,6 +83,17 @@ public class Misc {
         PROC,
     }
 
+    public static String peelCharString(String s) {
+
+        assert s != null;
+        int len = s.length();
+        assert len >= 2;
+        assert s.startsWith("'");
+        assert s.endsWith("'");
+
+        return s.substring(1, len - 1);
+    }
+
     public static boolean isEmptyStr(String s) {
         return s == null || s.length() == 0;
     }

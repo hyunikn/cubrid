@@ -34,6 +34,8 @@ import com.cubrid.plcsql.compiler.StaticSql;
 import com.cubrid.plcsql.compiler.type.Type;
 import com.cubrid.plcsql.compiler.visitor.AstVisitor;
 import java.util.Set;
+import java.util.List;
+import java.util.ArrayList;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 public class DeclCursor extends DeclId {
@@ -106,6 +108,13 @@ public class DeclCursor extends DeclId {
 
     @Override
     public void addAsPkgItem(CompileResponse resp) {
+
+        List<String> parameters = new ArrayList<>();
+        for (DeclParamIn dpi: paramList.nodes) {
+            parameters.add(dpi.name + ":" + dpi.typeSpec.type.dbType);
+        }
+
+        resp.addPkgCursor(name, recordTypeSpec.type.plcName, comment, parameters);
     }
 
     // --------------------------------------------------

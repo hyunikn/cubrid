@@ -81,7 +81,7 @@ public class CompileResponse implements PackableObject {
     }
 
     public void addPkgVar(
-            int dataType,
+            int dbType,
             int prec,
             int scale,
             int flags,
@@ -91,7 +91,7 @@ public class CompileResponse implements PackableObject {
         if (var == null) {
             var = new LinkedList<>();
         }
-        var.add(new PkgVar(dataType, prec, scale, flags, name, initValue, comment));
+        var.add(new PkgVar(dbType, prec, scale, flags, name, initValue, comment));
     }
 
     public void addPkgException(String name, String comment) {
@@ -255,14 +255,14 @@ public class CompileResponse implements PackableObject {
     static class PkgSpArg implements PackableObject {
 
         public String name;
-        public int dataType;
+        public int dbType;
         public int mode;
         public String defaultValue;
         public String comment;
 
-        PkgSpArg(String name, int dataType, int mode, String defaultValue, String comment) {
+        PkgSpArg(String name, int dbType, int mode, String defaultValue, String comment) {
             this.name = name;
-            this.dataType = dataType;
+            this.dbType = dbType;
             this.mode = mode;
             this.defaultValue = defaultValue;
             this.comment = comment;
@@ -271,7 +271,7 @@ public class CompileResponse implements PackableObject {
         @Override
         public void pack(CUBRIDPacker packer) {
             packer.packString(name);
-            packer.packInt(dataType);
+            packer.packInt(dbType);
             packer.packInt(mode);
             packer.packString(defaultValue);
             packer.packString(comment);
@@ -308,11 +308,11 @@ public class CompileResponse implements PackableObject {
         }
 
         public void addArg(
-                String name, int dataType, int mode, String defaultValue, String comment) {
+                String name, int dbType, int mode, String defaultValue, String comment) {
             if (args == null) {
                 args = new LinkedList<>();
             }
-            args.add(new PkgSpArg(name, dataType, mode, defaultValue, comment));
+            args.add(new PkgSpArg(name, dbType, mode, defaultValue, comment));
         }
 
         @Override
@@ -339,7 +339,7 @@ public class CompileResponse implements PackableObject {
 
     static class PkgVar implements PackableObject {
 
-        public int dataType;
+        public int dbType;
         public int prec;
         public int scale;
         public int flags;
@@ -348,14 +348,14 @@ public class CompileResponse implements PackableObject {
         public String comment;
 
         PkgVar(
-                int dataType,
+                int dbType,
                 int prec,
                 int scale,
                 int flags,
                 String name,
                 String initValue,
                 String comment) {
-            this.dataType = dataType;
+            this.dbType = dbType;
             this.prec = prec;
             this.scale = scale;
             this.flags = flags;
@@ -366,7 +366,7 @@ public class CompileResponse implements PackableObject {
 
         @Override
         public void pack(CUBRIDPacker packer) {
-            packer.packInt(dataType);
+            packer.packInt(dbType);
             packer.packInt(prec);
             packer.packInt(scale);
             packer.packInt(flags);

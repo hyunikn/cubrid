@@ -52,5 +52,6 @@ public class DeclException extends Decl {
 
     @Override
     public void addAsPkgItem(CompileResponse resp) {
+        resp.addPkgException(name, comment);
     }
 }

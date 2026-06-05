@@ -98,7 +98,10 @@ public class TypeNumeric extends Type {
                 IDX_NUMERIC,
                 getPlcName(precision, scale),
                 "java.math.BigDecimal",
-                getTypicalValueStr(precision, scale), DBType.DB_NUMERIC);
+                getTypicalValueStr(precision, scale),
+                DBType.DB_NUMERIC,
+                precision,
+                scale);
         this.precision = precision;
         this.scale = scale;
     }

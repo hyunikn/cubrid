@@ -49,4 +49,8 @@ public abstract class DeclParam extends DeclIdTypeDeclared {
     }
 
     abstract String toJavaSignature();
+
+    abstract int getMode();
+
+    abstract String getDefaultValStr();
 }

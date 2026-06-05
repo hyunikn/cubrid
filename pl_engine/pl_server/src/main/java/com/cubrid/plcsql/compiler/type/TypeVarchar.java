@@ -66,7 +66,14 @@ public class TypeVarchar extends Type {
     }
 
     private TypeVarchar(int length) {
-        super(IDX_STRING, getPlcName(length), "java.lang.String", getTypicalValueStr(length), DBType.DB_STRING);
+        super(
+                IDX_STRING,
+                getPlcName(length),
+                "java.lang.String",
+                getTypicalValueStr(length),
+                DBType.DB_STRING,
+                length,
+                NO_SCALE);
         this.length = length;
     }
 }

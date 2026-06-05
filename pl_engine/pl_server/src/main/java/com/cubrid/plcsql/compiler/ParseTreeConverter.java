@@ -36,7 +36,6 @@ import static com.cubrid.plcsql.compiler.antlrgen.StaticSqlWithRecordsParser.*;
 import com.cubrid.jsp.data.ColumnInfo;
 import com.cubrid.jsp.data.DBType;
 import com.cubrid.jsp.data.Dependency;
-import com.cubrid.jsp.data.CompileResponse;
 import com.cubrid.jsp.value.DateTimeParser;
 import com.cubrid.jsp.value.NumericValue;
 import com.cubrid.plcsql.compiler.antlrgen.PlcParser.Create_routineContext;
@@ -97,7 +96,8 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
         symbolStack.pushSymbolTable("package", null);
 
-        Create_package_specContext specContext = ((Sql_scriptContext) specTree).create_package_spec();
+        Create_package_specContext specContext =
+                ((Sql_scriptContext) specTree).create_package_spec();
         assert specContext != null;
 
         // check name and label
@@ -119,7 +119,8 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         NodeList<Decl> pkgBodyItems = null;
         if (bodyTree != null) {
 
-            Create_package_bodyContext bodyContext = ((Sql_scriptContext) bodyTree).create_package_body();
+            Create_package_bodyContext bodyContext =
+                    ((Sql_scriptContext) bodyTree).create_package_body();
             assert bodyContext != null;
 
             // check name and label
@@ -155,7 +156,8 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         }
 
         DeclPackage declPkg = new DeclPackage(specContext, name, comment, pkgItems, initializer);
-        // package is not put into the symbol table because it is never referenced in its own definition,
+        // package is not put into the symbol table because it is never referenced in its own
+        // definition,
         // but its scope must be set as other declarations
         declPkg.setScope(symbolStack.getCurrentScope());
 
@@ -267,7 +269,14 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                 Type retType = DBTypeAdapter.getValueType(iStore, fs.retType.type);
 
                 gfc.decl =
-                        new DeclFunc(null, fs.name, null, null, paramList, fs.directive, TypeSpec.getBogus(iStore, retType));
+                        new DeclFunc(
+                                null,
+                                fs.name,
+                                null,
+                                null,
+                                paramList,
+                                fs.directive,
+                                TypeSpec.getBogus(iStore, retType));
 
             } else if (q instanceof ServerAPI.SerialOrNot) {
 
@@ -1386,12 +1395,13 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
             ret.addNode(d);
         }
 
-        if (topLevelStmt == CREATE_SP || symbolStack.getCurrentScope().level >= symbolStack.LEVEL_MAIN + 2) {
+        if (topLevelStmt == CREATE_SP
+                || symbolStack.getCurrentScope().level >= symbolStack.LEVEL_MAIN + 2) {
 
             // NOTE: packge spec and body can have a declaration
             // which does not have a body at the top declaration level (LEVEL_MAIN + 1)
 
-            for (Decl d: ret.nodes) {
+            for (Decl d : ret.nodes) {
                 if (d.lackOfBody()) {
                     throw new SemanticError(
                             Misc.getLineColumnOf(d.ctx), // s017
@@ -1437,7 +1447,6 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
         throw new SemanticError(
                 Misc.getLineColumnOf(ctx), "AUTONOMOUS_TRANSACTION is not supported yet");
-
     }
 
     @Override
@@ -1465,7 +1474,8 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
     public AstNode visitException_decl(Exception_declContext ctx) {
 
         if (ctx.COMMENT() != null) {
-            if (topLevelStmt != CREATE_PKG_SPEC || symbolStack.getCurrentScope().level != SymbolStack.LEVEL_MAIN + 1) {
+            if (topLevelStmt != CREATE_PKG_SPEC
+                    || symbolStack.getCurrentScope().level != SymbolStack.LEVEL_MAIN + 1) {
                 throw new SemanticError(
                         Misc.getLineColumnOf(ctx), // s099
                         "only package spec items can have a comment");
@@ -1540,12 +1550,13 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         symbolStack.pushSymbolTable("cursor_decl", null);
         NodeList<DeclParamIn> paramList = visitCursor_parameter_list(ctx.cursor_parameter_list());
         if (ctx.static_sql() != null) {
-            // need to repeat checkAndConvertStaticSql() done in the previsit to record possible host variable uses
+            // need to repeat checkAndConvertStaticSql() done in the previsit to record possible
+            // host variable uses
             // for the check of redefinition of used name
             SqlSemantics sws = sssMap.get(ctx);
             staticSql = checkAndConvertStaticSql(true, sws, ctx.static_sql());
             TypeRecord ty = TypeRecord.getInstance(iStore, name, staticSql.selectList);
-            recordTypeSpec = new TypeSpec(ctx.static_sql(), ty);    // derived from the static sql
+            recordTypeSpec = new TypeSpec(ctx.static_sql(), ty); // derived from the static sql
         } else {
             recordTypeSpec = (TypeSpec) visit(ctx.type_spec());
         }
@@ -1585,7 +1596,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
             if (scopeLevel == DECL_TOP_LEVEL) {
                 sqlDataAccess = ServerConstants.SP_SQL_TYPE_NO_SQL; // reset the global variable
             }
-            
+
             symbolStack.pushSymbolTable(
                     name, isFunction ? Misc.RoutineType.FUNC : Misc.RoutineType.PROC);
 
@@ -1619,12 +1630,12 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                         "function " + ret.name + " can reach its end without returning a value");
             }
 
-            if (scopeLevel == DECL_TOP_LEVEL) {
-            }
+            if (scopeLevel == DECL_TOP_LEVEL) {}
 
             ret.decls = decls;
             ret.body = body;
-            ret.sqlDataAccess = (scopeLevel == DECL_TOP_LEVEL) ? sqlDataAccess : -1;  // -1: irrelevant
+            ret.sqlDataAccess =
+                    (scopeLevel == DECL_TOP_LEVEL) ? sqlDataAccess : -1; // -1: irrelevant
 
             if (symbolStack.getCurrentScope().level > SymbolStack.LEVEL_MAIN) {
                 checkRedefinitionOfUsedName(name, ctx);
@@ -1794,12 +1805,12 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                     addToSqlUses(egfc);
                     egfc.decl =
                             new DeclFunc(
-                                    null,   // ctx
+                                    null, // ctx
                                     name,
-                                    null,   // comment
-                                    null,   // loopOptimizables
+                                    null, // comment
+                                    null, // loopOptimizables
                                     EMPTY_PARAMS,
-                                    0,      // directive
+                                    0, // directive
                                     TypeSpec.getBogus(iStore, retType));
                     ret = egfc;
                 }
@@ -2156,7 +2167,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                 new DeclVar(
                         ctx.for_cursor().record_name(),
                         record,
-                        null,   // comment
+                        null, // comment
                         new TypeSpec(null, recTy),
                         false,
                         null);
@@ -2953,7 +2964,8 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
     private void previsitConstant_decl(Constant_declContext ctx) {
 
         if (ctx.COMMENT() != null) {
-            if (topLevelStmt != CREATE_PKG_SPEC || symbolStack.getCurrentScope().level != SymbolStack.LEVEL_MAIN + 1) {
+            if (topLevelStmt != CREATE_PKG_SPEC
+                    || symbolStack.getCurrentScope().level != SymbolStack.LEVEL_MAIN + 1) {
                 throw new SemanticError(
                         Misc.getLineColumnOf(ctx), // s100
                         "only package spec items can have a comment");
@@ -2967,13 +2979,14 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         DeclConst ret = new DeclConst(ctx, name, null, ty, ctx.NOT() != null, null);
         symbolStack.putDecl(name, ret);
 
-        previsiting = false;    // TODO do this in finally
+        previsiting = false; // TODO do this in finally
     }
 
     private void previsitVariable_decl(Variable_declContext ctx) {
 
         if (ctx.COMMENT() != null) {
-            if (topLevelStmt != CREATE_PKG_SPEC || symbolStack.getCurrentScope().level != SymbolStack.LEVEL_MAIN + 1) {
+            if (topLevelStmt != CREATE_PKG_SPEC
+                    || symbolStack.getCurrentScope().level != SymbolStack.LEVEL_MAIN + 1) {
                 throw new SemanticError(
                         Misc.getLineColumnOf(ctx), // s101
                         "only package spec items can have a comment");
@@ -2987,13 +3000,14 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         DeclVar ret = new DeclVar(ctx, name, null, ty, ctx.NOT() != null, null);
         symbolStack.putDecl(name, ret);
 
-        previsiting = false;    // TODO do this in finally
+        previsiting = false; // TODO do this in finally
     }
 
     private void previsitCursor_decl(Cursor_declContext ctx) {
 
         if (ctx.COMMENT() != null) {
-            if (topLevelStmt != CREATE_PKG_SPEC || symbolStack.getCurrentScope().level != SymbolStack.LEVEL_MAIN + 1) {
+            if (topLevelStmt != CREATE_PKG_SPEC
+                    || symbolStack.getCurrentScope().level != SymbolStack.LEVEL_MAIN + 1) {
                 throw new SemanticError(
                         Misc.getLineColumnOf(ctx), // s102
                         "only package spec items can have a comment");
@@ -3030,13 +3044,12 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                         Misc.getLineColumnOf(ctx.type_spec()), // s098
                         "cursor's return type must be a record type");
             }
-
         }
         symbolStack.popSymbolTable();
         DeclCursor ret = new DeclCursor(ctx, name, null, paramList, recordTypeSpec, staticSql);
         symbolStack.putDecl(name, ret);
 
-        previsiting = false;    // TODO do this in finally
+        previsiting = false; // TODO do this in finally
     }
 
     private void previsitRoutine_decl(Routine_declContext ctx, Map<String, DeclRoutine> store) {
@@ -3149,7 +3162,14 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                     }
                 }
                 DeclFunc ret =
-                        new DeclFunc(ctx, name, comment, routineLoopOptimizables, paramList, directive, retTypeSpec);
+                        new DeclFunc(
+                                ctx,
+                                name,
+                                comment,
+                                routineLoopOptimizables,
+                                paramList,
+                                directive,
+                                retTypeSpec);
                 symbolStack.putDecl(name, ret);
                 if (store != null) {
                     store.put(name, ret);
@@ -3161,7 +3181,9 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                             Misc.getLineColumnOf(ctx), // s051
                             "procedure " + name + " may not specify a return type");
                 }
-                DeclProc ret = new DeclProc(ctx, name, comment, routineLoopOptimizables, paramList, directive);
+                DeclProc ret =
+                        new DeclProc(
+                                ctx, name, comment, routineLoopOptimizables, paramList, directive);
                 symbolStack.putDecl(name, ret);
                 if (store != null) {
                     store.put(name, ret);
@@ -3450,8 +3472,8 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
             Type paramType = DBTypeAdapter.getValueType(iStore, params[i].type);
 
             TypeSpec tySpec = TypeSpec.getBogus(iStore, paramType);
-            if ((params[i].mode & ServerConstants.PARAM_MODE_OUT) != 0) {
-                boolean alsoIn = (params[i].mode & ServerConstants.PARAM_MODE_IN) != 0;
+            if ((params[i].mode & ServerConstants.SP_PARAM_MODE_OUT) != 0) {
+                boolean alsoIn = (params[i].mode & ServerConstants.SP_PARAM_MODE_IN) != 0;
                 paramList.nodes.add(new DeclParamOut(null, "p" + i, null, tySpec, alsoIn));
             } else {
                 Expr defaultVal = params[i].hasDefault ? SP_PARAM_DEFAULT_VAL_DUMMY : null;

@@ -66,7 +66,14 @@ public class TypeChar extends Type {
     }
 
     private TypeChar(int length) {
-        super(IDX_STRING, getPlcName(length), "java.lang.String", getTypicalValueStr(length), DBType.DB_CHAR);
+        super(
+                IDX_STRING,
+                getPlcName(length),
+                "java.lang.String",
+                getTypicalValueStr(length),
+                DBType.DB_CHAR,
+                length,
+                NO_SCALE);
         this.length = length;
     }
 }

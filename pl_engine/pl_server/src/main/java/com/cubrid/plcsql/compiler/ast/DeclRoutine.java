@@ -31,9 +31,9 @@
 package com.cubrid.plcsql.compiler.ast;
 
 import com.cubrid.jsp.data.CompileResponse;
-import com.cubrid.plcsql.compiler.serverapi.ServerConstants;
 import com.cubrid.plcsql.compiler.ast.loopOpt.LocalRoutineCall;
 import com.cubrid.plcsql.compiler.ast.loopOpt.SqlUse;
+import com.cubrid.plcsql.compiler.serverapi.ServerConstants;
 import com.cubrid.plcsql.compiler.type.Type;
 import java.util.Set;
 import java.util.Stack;
@@ -220,13 +220,25 @@ public abstract class DeclRoutine extends Decl {
     @Override
     public void addAsPkgItem(CompileResponse resp) {
 
-        CompileResponse.PkgSp pkgSp = new CompileResponse.PkgSp(
-                getJavaSignature(),
-                name,
-                isProcedure() ? ServerConstants.SP_TYPE_PROCEDURE : ServerConstants.SP_TYPE_FUNCTION,
-                isProcedure() ? 0 : retTypeSpec.type.dbType,
-                directive,
-                sqlDataAccess,
-                comment);
+        CompileResponse.PkgSp pkgSp =
+                new CompileResponse.PkgSp(
+                        getJavaSignature(),
+                        name,
+                        isProcedure()
+                                ? ServerConstants.SP_TYPE_PROCEDURE
+                                : ServerConstants.SP_TYPE_FUNCTION,
+                        isProcedure() ? 0 : retTypeSpec.type.dbType,
+                        directive,
+                        sqlDataAccess,
+                        comment);
+
+        for (DeclParam dp : paramList.nodes) {
+            pkgSp.addArg(
+                    dp.name,
+                    dp.typeSpec.type.dbType,
+                    dp.getMode(),
+                    dp.getDefaultValStr(),
+                    dp.comment);
+        }
     }
 }

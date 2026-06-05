@@ -42,9 +42,7 @@ public class TypeRecord extends Type {
     public boolean generateEq; // whether to generate a opEq method for this record type
 
     public static TypeRecord getInstance(
-            InstanceStore iStore,
-            String name,
-            List<Misc.Pair<String, Type>> selectList) {
+            InstanceStore iStore, String name, List<Misc.Pair<String, Type>> selectList) {
 
         TypeRecord ret = iStore.typeRecord.get(selectList);
         if (ret == null) {
@@ -76,7 +74,14 @@ public class TypeRecord extends Type {
     }
 
     private TypeRecord(String name, int seq, List<Misc.Pair<String, Type>> selectList) {
-        super(IDX_RECORD, getPlcName(name + seq), getJavaName(name + seq), null, -1);
+        super(
+                IDX_RECORD,
+                getPlcName(name + seq),
+                getJavaName(name + seq),
+                null,
+                NO_DB_TYPE,
+                NO_PREC,
+                NO_SCALE);
         this.name = name;
         this.selectList = selectList;
     }

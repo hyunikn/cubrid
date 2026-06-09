@@ -137,7 +137,8 @@ public class CompileResponse implements PackableObject {
     }
 
     // for Package Spec
-    public CompileResponse(int type, String translated, String className, Set<Dependency> dependencies) {
+    public CompileResponse(
+            int type, String translated, String className, Set<Dependency> dependencies) {
 
         assert type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC;
 
@@ -307,8 +308,7 @@ public class CompileResponse implements PackableObject {
             this.comment = comment;
         }
 
-        public void addArg(
-                String name, int dbType, int mode, String defaultValue, String comment) {
+        public void addArg(String name, int dbType, int mode, String defaultValue, String comment) {
             if (args == null) {
                 args = new LinkedList<>();
             }

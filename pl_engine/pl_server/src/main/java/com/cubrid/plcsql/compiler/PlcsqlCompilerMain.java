@@ -35,10 +35,10 @@ import com.cubrid.jsp.data.CompileRequest;
 import com.cubrid.jsp.data.CompileResponse;
 import com.cubrid.plcsql.compiler.antlrgen.PlcLexer;
 import com.cubrid.plcsql.compiler.antlrgen.PlcParser;
+import com.cubrid.plcsql.compiler.ast.Decl;
 import com.cubrid.plcsql.compiler.ast.Unit;
 import com.cubrid.plcsql.compiler.ast.UnitPkg;
 import com.cubrid.plcsql.compiler.ast.UnitSp;
-import com.cubrid.plcsql.compiler.ast.Decl;
 import com.cubrid.plcsql.compiler.ast.loopOpt.SqlUse;
 import com.cubrid.plcsql.compiler.error.SemanticError;
 import com.cubrid.plcsql.compiler.error.SyntaxError;
@@ -175,9 +175,12 @@ public class PlcsqlCompilerMain {
         // System.out.println("[TEMP] text to the compiler");
         // System.out.println(code);
 
-        assert (type == CompileRequest.PLCSQL_COMPILE_TYPE_SP && !Misc.isEmptyStr(code) && Misc.isEmptyStr(bodyCode))
+        assert (type == CompileRequest.PLCSQL_COMPILE_TYPE_SP
+                        && !Misc.isEmptyStr(code)
+                        && Misc.isEmptyStr(bodyCode))
                 || (type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC && !Misc.isEmptyStr(code))
-                || (type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_BODY && !Misc.isEmptyStr(bodyCode));
+                || (type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_BODY
+                        && !Misc.isEmptyStr(bodyCode));
         assert !(Misc.isEmptyStr(code) && Misc.isEmptyStr(bodyCode));
 
         boolean verbose = request.mode.contains("v");
@@ -216,7 +219,8 @@ public class PlcsqlCompilerMain {
 
             if (Misc.isEmptyStr(code)) {
                 assert type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_BODY;
-                // just return: semantic check and further processes are not possible without a spec code
+                // just return: semantic check and further processes are not possible without a spec
+                // code
                 return new CompileResponse(type);
             } else {
                 CharStream input = CharStreams.fromString(code);
@@ -310,8 +314,7 @@ public class PlcsqlCompilerMain {
         // ------------------------------------------
         // Java code generation
 
-        String javaCode =
-                new JavaCodeWriter(iStore, sqlUsesInRecursiveCalls).buildCodeLines(unit);
+        String javaCode = new JavaCodeWriter(iStore, sqlUsesInRecursiveCalls).buildCodeLines(unit);
 
         if (verbose) {
             logElapsedTime(logStore, "Java code generation", t0);
@@ -334,14 +337,15 @@ public class PlcsqlCompilerMain {
                     typeChecker.dependencies);
         } else if (type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC) {
 
-            CompileResponse resp = new CompileResponse(
-                    CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC,
-                    javaCode,
-                    unitPkg.getClassName(),
-                    typeChecker.dependencies);
+            CompileResponse resp =
+                    new CompileResponse(
+                            CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC,
+                            javaCode,
+                            unitPkg.getClassName(),
+                            typeChecker.dependencies);
 
             assert converter.pkgSpecItems != null;
-            for (Decl d: converter.pkgSpecItems.nodes) {
+            for (Decl d : converter.pkgSpecItems.nodes) {
                 d.addAsPkgItem(resp);
             }
 

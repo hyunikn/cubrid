@@ -77,8 +77,7 @@ public class DeclProc extends DeclRoutine {
         DeclProc other = (DeclProc) d;
 
         // name and parameters must be the same
-        if (!this.name.equals(other.name) ||
-                !this.paramList.equals(other.paramList)) {
+        if (!this.name.equals(other.name) || !this.paramList.equals(other.paramList)) {
             return false;
         }
 

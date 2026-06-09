@@ -47,7 +47,12 @@ public class DeclVar extends DeclIdTypeDeclared {
     public final Expr val;
 
     public DeclVar(
-            ParserRuleContext ctx, String name, String comment, TypeSpec typeSpec, boolean notNull, Expr val) {
+            ParserRuleContext ctx,
+            String name,
+            String comment,
+            TypeSpec typeSpec,
+            boolean notNull,
+            Expr val) {
         super(ctx, name, comment);
 
         this.typeSpec = typeSpec;
@@ -66,7 +71,10 @@ public class DeclVar extends DeclIdTypeDeclared {
 
     @Override
     public void addAsPkgItem(CompileResponse resp) {
-        resp.addPkgVar(typeSpec.type.dbType, typeSpec.type.prec, typeSpec.type.scale,
+        resp.addPkgVar(
+                typeSpec.type.dbType,
+                typeSpec.type.prec,
+                typeSpec.type.scale,
                 (notNull ? ServerConstants.PKG_VAR_NOT_NULL : 0),
                 name,
                 (val == null ? null : val.ctx.getText()),

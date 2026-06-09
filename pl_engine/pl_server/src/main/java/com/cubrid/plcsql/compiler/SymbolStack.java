@@ -124,7 +124,13 @@ public class SymbolStack {
                         // add op
                         DeclFunc op =
                                 new DeclFunc(
-                                        null, name, null, null, params, 0, TypeSpec.getBogus(null, retType));
+                                        null,
+                                        name,
+                                        null,
+                                        null,
+                                        params,
+                                        0,
+                                        TypeSpec.getBogus(null, retType));
                         putOperator(name, op, opAnnot.coercionScheme());
                     }
                 }
@@ -154,7 +160,7 @@ public class SymbolStack {
                                                 "size",
                                                 null,
                                                 TypeSpec.getBogus(null, Type.INT),
-                                                new ExprUint(null, "20000", Type.INT))), 
+                                                new ExprUint(null, "20000", Type.INT))),
                         0);
         putDeclTo(predefinedSymbols, "DBMS_OUTPUT$ENABLE", dp);
 
@@ -523,7 +529,8 @@ public class SymbolStack {
         for (String s : funcNames) {
             DeclFunc df =
                     new DeclFunc(
-                            null, s, null, null, null, 0, null); // only name is used for builtin functions
+                            null, s, null, null, null, 0,
+                            null); // only name is used for builtin functions
             putDeclTo(predefinedSymbols, df.name, df);
         }
     }

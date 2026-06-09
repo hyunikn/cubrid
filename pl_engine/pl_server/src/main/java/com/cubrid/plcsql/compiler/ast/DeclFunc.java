@@ -79,14 +79,13 @@ public class DeclFunc extends DeclRoutine {
         DeclFunc other = (DeclFunc) d;
 
         // name and parameters must be the same
-        if (!this.name.equals(other.name) ||
-                !this.paramList.equals(other.paramList) ||
-                this.retTypeSpec.type != other.retTypeSpec.type) {
+        if (!this.name.equals(other.name)
+                || !this.paramList.equals(other.paramList)
+                || this.retTypeSpec.type != other.retTypeSpec.type) {
             return false;
         }
 
         // this must have a body and the other may not
         return (this.body != null && other.body == null);
     }
-
 }

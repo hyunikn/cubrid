@@ -35,25 +35,25 @@ import com.cubrid.plcsql.compiler.Scope;
 import org.antlr.v4.runtime.ParserRuleContext;
 
 /*
- Decl
-    - DeclLabel
-    - DeclException
-    - DeclPacakge
-    - DeclRoutine
-        - DeclFunc
-        - DedlProc
-    - DeclId
-        - DeclDynamicRecord
-        - DeclForIter
-        - DeclIdTypeDeclared
-            - DeclParam
-                - DeclParamIn
-                - DeclParamOut
-            - DeclConst
-            - DeclVar
-        - DeclCursor
+Decl
+   - DeclLabel
+   - DeclException
+   - DeclPacakge
+   - DeclRoutine
+       - DeclFunc
+       - DedlProc
+   - DeclId
+       - DeclDynamicRecord
+       - DeclForIter
+       - DeclIdTypeDeclared
+           - DeclParam
+               - DeclParamIn
+               - DeclParamOut
+           - DeclConst
+           - DeclVar
+       - DeclCursor
 
- */
+*/
 
 public abstract class Decl extends AstNode {
 
@@ -82,7 +82,6 @@ public abstract class Decl extends AstNode {
         // by default false
         // DeclCursor, DeclFunc, DeclProc will override this default
         return false;
-
     }
 
     public boolean lackOfBody() {

@@ -44,7 +44,11 @@ public class DeclPackage extends Decl {
     public Body initializer;
 
     public DeclPackage(
-            ParserRuleContext ctx, String name, String comment, NodeList<Decl> pkgItems, Body initializer) {
+            ParserRuleContext ctx,
+            String name,
+            String comment,
+            NodeList<Decl> pkgItems,
+            Body initializer) {
         super(ctx, name, comment);
 
         this.pkgItems = pkgItems;

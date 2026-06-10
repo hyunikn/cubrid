@@ -61,7 +61,16 @@ public class DeclFunc extends DeclRoutine {
             NodeList<DeclParam> paramList,
             int directive,
             TypeSpec retTypeSpec) {
-        super(ctx, name, comment, loopOptimizables, paramList, directive, retTypeSpec, null, null);
+        super(
+                ctx,
+                name,
+                comment,
+                loopOptimizables,
+                paramList,
+                directive,
+                retTypeSpec,
+                null,
+                new Body());
     }
 
     @Override

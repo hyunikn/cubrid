@@ -3079,10 +3079,17 @@ jsp_create_pkg_spec (PARSER_CONTEXT *parser, PT_NODE *statement, const char *uni
   int err;
   PLCSQL_COMPILE_REQUEST pkg_compile_request;
   PLCSQL_COMPILE_RESPONSE pkg_compile_response;
-  DB_VALUE value;
+  DB_VALUE scode_body_value;
   MOP pkg_mop;
 
   err = NO_ERROR;
+
+  // read and keep the body code, if any
+  err = jsp_get_pkg_scode_body (unique_name, &scode_body_value);
+  if (err != NO_ERROR)
+    {
+      goto error_exit;
+    }
 
   // does it already exist?
   pkg_mop = jsp_find_pkg (unique_name, DB_AUTH_NONE);
@@ -3111,15 +3118,10 @@ jsp_create_pkg_spec (PARSER_CONTEXT *parser, PT_NODE *statement, const char *uni
   pkg_compile_request.type = PLCSQL_COMPILE_TYPE_PKG_SPEC;
   pkg_compile_request.code.assign (statement->sql_user_text, statement->sql_user_text_len);
   pkg_compile_request.owner.assign (owner_name);
-  err = jsp_get_pkg_scode_body (unique_name, &value);
-  if (err != NO_ERROR)
+  if (!DB_IS_NULL (&scode_body_value))
     {
-      goto error_exit;
-    }
-  if (!DB_IS_NULL (&value))
-    {
-      pkg_compile_request.body_code.assign (db_get_string (&value));
-      pr_clear_value (&value);
+      pkg_compile_request.body_code.assign (db_get_string (&scode_body_value));
+      pr_clear_value (&scode_body_value);
     }
 
   au_perform_push_user (owner_mop);

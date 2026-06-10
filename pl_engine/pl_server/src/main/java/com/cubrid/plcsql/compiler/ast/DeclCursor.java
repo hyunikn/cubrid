@@ -66,7 +66,9 @@ public class DeclCursor extends DeclId {
         this.recordTypeSpec = recordTypeSpec;
         this.staticSql = staticSql;
 
-        setHostValuesMap(paramList, staticSql.hostExprs.keySet());
+        if (staticSql != null) {
+            setHostValuesMap(paramList, staticSql.hostExprs.keySet());
+        }
     }
 
     @Override

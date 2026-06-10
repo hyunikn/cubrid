@@ -248,10 +248,11 @@ public class TypeChecker extends AstVisitor<Type> {
     @Override
     public Type visitDeclCursor(DeclCursor node) {
 
-        assert node.staticSql.intoTargetList == null; // by earlier check
-
         visitNodeList(node.paramList);
-        typeCheckHostExprs(node.staticSql); // s400
+        if (node.staticSql != null) {
+            assert node.staticSql.intoTargetList == null; // by earlier check
+            typeCheckHostExprs(node.staticSql); // s400
+        }
         return null;
     }
 
@@ -1384,8 +1385,10 @@ public class TypeChecker extends AstVisitor<Type> {
         if (node.decls != null) {
             visitNodeList(node.decls);
         }
-        assert node.body != null; // syntactically guaranteed
-        visitBody(node.body);
+
+        if (node.body != null) {
+            visitBody(node.body);
+        }
 
         routineDefNestLevel--;
 

@@ -125,7 +125,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
             // check name and label
             String nameInBody = Misc.getNormalizedText(bodyContext.uniq_name().name);
-            assert name == nameInBody;
+            assert name.equals(nameInBody) : (name + " != " + nameInBody);
             if (bodyContext.label_name() != null) {
                 checkLabel(name, bodyContext.label_name()); // s106
             }
@@ -1452,6 +1452,15 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
     @Override
     public AstNode visitConstant_decl(Constant_declContext ctx) {
 
+        if (ctx.COMMENT() != null) {
+            if (topLevelStmt != CREATE_PKG_SPEC
+                    || symbolStack.getCurrentScope().level != SymbolStack.LEVEL_MAIN + 1) {
+                throw new SemanticError(
+                        Misc.getLineColumnOf(ctx), // s100
+                        "only package spec items can have a comment");
+            }
+        }
+
         String name = Misc.getNormalizedText(ctx.identifier());
 
         TypeSpec ty = (TypeSpec) visit(ctx.type_spec());
@@ -1500,6 +1509,15 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
     @Override
     public AstNode visitVariable_decl(Variable_declContext ctx) {
 
+        if (ctx.COMMENT() != null) {
+            if (topLevelStmt != CREATE_PKG_SPEC
+                    || symbolStack.getCurrentScope().level != SymbolStack.LEVEL_MAIN + 1) {
+                throw new SemanticError(
+                        Misc.getLineColumnOf(ctx), // s101
+                        "only package spec items can have a comment");
+            }
+        }
+
         String name = Misc.getNormalizedText(ctx.identifier());
 
         TypeSpec ty = (TypeSpec) visit(ctx.type_spec());
@@ -1539,6 +1557,15 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
     @Override
     public AstNode visitCursor_decl(Cursor_declContext ctx) {
+
+        if (ctx.COMMENT() != null) {
+            if (topLevelStmt != CREATE_PKG_SPEC
+                    || symbolStack.getCurrentScope().level != SymbolStack.LEVEL_MAIN + 1) {
+                throw new SemanticError(
+                        Misc.getLineColumnOf(ctx), // s102
+                        "only package spec items can have a comment");
+            }
+        }
 
         connectionRequired = true;
 
@@ -1614,6 +1641,14 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                                     "label does not match the %s name %s",
                                     isFunction ? "function" : "procedure", name)); // s053
                 }
+
+                if (isFunction && !controlFlowBlocked) {
+                    throw new SemanticError(
+                            Misc.getLineColumnOf(ctx), // s016
+                            "function "
+                                    + ret.name
+                                    + " can reach its end without returning a value");
+                }
             }
 
             symbolStack.popSymbolTable();
@@ -1623,14 +1658,6 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                 // Restore the null.
                 loopOptimizables = null;
             }
-
-            if (isFunction && !controlFlowBlocked) {
-                throw new SemanticError(
-                        Misc.getLineColumnOf(ctx), // s016
-                        "function " + ret.name + " can reach its end without returning a value");
-            }
-
-            if (scopeLevel == DECL_TOP_LEVEL) {}
 
             ret.decls = decls;
             ret.body = body;
@@ -2963,15 +2990,6 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
     private void previsitConstant_decl(Constant_declContext ctx) {
 
-        if (ctx.COMMENT() != null) {
-            if (topLevelStmt != CREATE_PKG_SPEC
-                    || symbolStack.getCurrentScope().level != SymbolStack.LEVEL_MAIN + 1) {
-                throw new SemanticError(
-                        Misc.getLineColumnOf(ctx), // s100
-                        "only package spec items can have a comment");
-            }
-        }
-
         previsiting = true;
 
         String name = Misc.getNormalizedText(ctx.identifier());
@@ -2984,15 +3002,6 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
     private void previsitVariable_decl(Variable_declContext ctx) {
 
-        if (ctx.COMMENT() != null) {
-            if (topLevelStmt != CREATE_PKG_SPEC
-                    || symbolStack.getCurrentScope().level != SymbolStack.LEVEL_MAIN + 1) {
-                throw new SemanticError(
-                        Misc.getLineColumnOf(ctx), // s101
-                        "only package spec items can have a comment");
-            }
-        }
-
         previsiting = true;
 
         String name = Misc.getNormalizedText(ctx.identifier());
@@ -3004,15 +3013,6 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
     }
 
     private void previsitCursor_decl(Cursor_declContext ctx) {
-
-        if (ctx.COMMENT() != null) {
-            if (topLevelStmt != CREATE_PKG_SPEC
-                    || symbolStack.getCurrentScope().level != SymbolStack.LEVEL_MAIN + 1) {
-                throw new SemanticError(
-                        Misc.getLineColumnOf(ctx), // s102
-                        "only package spec items can have a comment");
-            }
-        }
 
         previsiting = true;
 
@@ -3060,7 +3060,13 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                     "procedure/function body cannot be given in package declarations");
         }
 
-        final int DECL_TOP_LEVEL = SymbolStack.LEVEL_MAIN + (topLevelStmt == CREATE_SP ? 0 : 1);
+        int DECL_TOP_LEVEL;
+        if (topLevelStmt == CREATE_SP) {
+            DECL_TOP_LEVEL = SymbolStack.LEVEL_MAIN;
+        } else {
+            DECL_TOP_LEVEL = SymbolStack.LEVEL_MAIN + 2; // 2: two stacks, package and previsit
+        }
+
         int scopeLevel = symbolStack.getCurrentScope().level;
 
         StmtLoop.LoopOptimizables routineLoopOptimizables = null;
@@ -3712,7 +3718,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         // Variables and constants are also scanned to support their %type appearing in the
         // parameter and/or return types of the routines
 
-        symbolStack.pushSymbolTable("temp", null);
+        symbolStack.pushSymbolTable("previsit", null);
         for (Declare_specContext ds : declSpecs) {
 
             ParserRuleContext d;

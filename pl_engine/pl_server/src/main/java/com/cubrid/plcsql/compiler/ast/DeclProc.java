@@ -59,7 +59,7 @@ public class DeclProc extends DeclRoutine {
             StmtLoop.LoopOptimizables loopOptimizables,
             NodeList<DeclParam> paramList,
             int directive) {
-        super(ctx, name, comment, loopOptimizables, paramList, directive, null, null, null);
+        super(ctx, name, comment, loopOptimizables, paramList, directive, null, null, new Body());
     }
 
     @Override

@@ -240,5 +240,7 @@ public abstract class DeclRoutine extends Decl {
                     dp.getDefaultValStr(),
                     dp.comment);
         }
+
+        resp.addPkgSp(pkgSp);
     }
 }

@@ -360,38 +360,56 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
             return EMPTY_PARAMS;
         }
 
-        boolean ofTopLevel = symbolStack.getCurrentScope().level == (SymbolStack.LEVEL_MAIN + 1);
         NodeList<DeclParam> ret = new NodeList<>();
 
-        boolean paramDefaultFound = false;
-        int i = 0;
-        for (ParameterContext pc : ctx.parameter()) {
-            DeclParam dp = (DeclParam) visit(pc);
-            i++;
+        if (previsiting) {
 
-            if (dp.hasDefault()) {
-                paramDefaultFound = true;
-            } else {
-                if (paramDefaultFound) {
-                    throw new SemanticError(
-                            Misc.getLineColumnOf(pc), // s095
-                            "parameter "
-                                    + i
-                                    + " must have a default value because its predecessor has one");
+            for (ParameterContext pc : ctx.parameter()) {
+                DeclParam dp = (DeclParam) visit(pc);
+                ret.addNode(dp);
+            }
+        } else {
+
+            int DECL_TOP_LEVEL = SymbolStack.LEVEL_MAIN + (topLevelStmt == CREATE_SP ? 0 : 1);
+            boolean ofTopLevel = (symbolStack.getCurrentScope().level == DECL_TOP_LEVEL + 1);
+            boolean paramDefaultFound = false;
+
+            for (ParameterContext pc : ctx.parameter()) {
+                DeclParam dp = (DeclParam) visit(pc);
+
+                if (dp.hasDefault()) {
+                    paramDefaultFound = true;
+                } else {
+                    if (paramDefaultFound) {
+                        throw new SemanticError(
+                                Misc.getLineColumnOf(pc), // s095
+                                "parameter "
+                                        + dp.name
+                                        + " must have a default value because its predecessor has one");
+                    }
                 }
-            }
 
-            if (ofTopLevel
-                    && (dp.typeSpec.type == Type.BOOLEAN
-                            || dp.typeSpec.type == Type.SYS_REFCURSOR)) {
-                throw new SemanticError(
-                        Misc.getLineColumnOf(pc), // s064
-                        "type "
-                                + dp.typeSpec.type.plcName
-                                + " cannot be used as a paramter type of stored procedures");
-            }
+                if (ofTopLevel) {
+                    if (dp.typeSpec.type == Type.BOOLEAN
+                            || dp.typeSpec.type == Type.SYS_REFCURSOR) {
+                        throw new SemanticError(
+                                Misc.getLineColumnOf(pc), // s064
+                                "type "
+                                        + dp.typeSpec.type.plcName
+                                        + " cannot be used as a paramter type of stored procedures");
+                    }
+                } else {
+                    if (dp.comment != null) {
+                        throw new SemanticError(
+                                Misc.getLineColumnOf(pc), // s108
+                                "parameter "
+                                        + dp.name
+                                        + " cannot have a comment because it is of a local routine");
+                    }
+                }
 
-            ret.addNode(dp);
+                ret.addNode(dp);
+            }
         }
 
         return ret;

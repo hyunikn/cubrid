@@ -80,18 +80,11 @@ public class CompileResponse implements PackableObject {
         sp.add(p);
     }
 
-    public void addPkgVar(
-            int dbType,
-            int prec,
-            int scale,
-            int flags,
-            String name,
-            String initValue,
-            String comment) {
+    public void addPkgVar(int dbType, int prec, int scale, int flags, String name, String comment) {
         if (var == null) {
             var = new LinkedList<>();
         }
-        var.add(new PkgVar(dbType, prec, scale, flags, name, initValue, comment));
+        var.add(new PkgVar(dbType, prec, scale, flags, name, comment));
     }
 
     public void addPkgException(String name, String comment) {
@@ -189,7 +182,6 @@ public class CompileResponse implements PackableObject {
                     break;
 
                 case CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC:
-                case CompileRequest.PLCSQL_COMPILE_TYPE_PKG_BODY:
                     packer.packString(translated);
                     packer.packString(className);
                     packer.packCString(compiledCode);
@@ -249,6 +241,13 @@ public class CompileResponse implements PackableObject {
                     }
 
                     break;
+
+                case CompileRequest.PLCSQL_COMPILE_TYPE_PKG_BODY:
+                    // nothing more to pack
+                    break;
+
+                default:
+                    assert false;
             }
         }
     }
@@ -265,8 +264,8 @@ public class CompileResponse implements PackableObject {
             this.name = name;
             this.dbType = dbType;
             this.mode = mode;
-            this.defaultValue = defaultValue;
-            this.comment = comment;
+            this.defaultValue = defaultValue == null ? "" : defaultValue;
+            this.comment = comment == null ? "" : comment;
         }
 
         @Override
@@ -305,7 +304,7 @@ public class CompileResponse implements PackableObject {
             this.returnType = returnType;
             this.directive = directive;
             this.sqlDataAccess = sqlDataAccess;
-            this.comment = comment;
+            this.comment = comment == null ? "" : comment;
         }
 
         public void addArg(String name, int dbType, int mode, String defaultValue, String comment) {
@@ -344,24 +343,15 @@ public class CompileResponse implements PackableObject {
         public int scale;
         public int flags;
         public String name;
-        public String initValue;
         public String comment;
 
-        PkgVar(
-                int dbType,
-                int prec,
-                int scale,
-                int flags,
-                String name,
-                String initValue,
-                String comment) {
+        PkgVar(int dbType, int prec, int scale, int flags, String name, String comment) {
             this.dbType = dbType;
             this.prec = prec;
             this.scale = scale;
             this.flags = flags;
             this.name = name;
-            this.initValue = initValue;
-            this.comment = comment;
+            this.comment = comment == null ? "" : comment;
         }
 
         @Override
@@ -371,7 +361,6 @@ public class CompileResponse implements PackableObject {
             packer.packInt(scale);
             packer.packInt(flags);
             packer.packString(name);
-            packer.packString(initValue);
             packer.packString(comment);
         }
     }
@@ -383,7 +372,7 @@ public class CompileResponse implements PackableObject {
 
         PkgException(String name, String comment) {
             this.name = name;
-            this.comment = comment;
+            this.comment = comment == null ? "" : comment;
         }
 
         @Override
@@ -403,7 +392,7 @@ public class CompileResponse implements PackableObject {
         PkgCursor(String name, String recordType, String comment, List<String> parameters) {
             this.name = name;
             this.recordType = recordType;
-            this.comment = comment;
+            this.comment = comment == null ? "" : comment;
             this.parameters = parameters;
         }
 
@@ -431,7 +420,7 @@ public class CompileResponse implements PackableObject {
 
         PkgRecType(String name, String comment, List<String> fields) {
             this.name = name;
-            this.comment = comment;
+            this.comment = comment == null ? "" : comment;
             this.fields = fields;
         }
 

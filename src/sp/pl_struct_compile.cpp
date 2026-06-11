@@ -168,7 +168,6 @@ namespace cubpl
 	  break;
 
 	  case PLCSQL_COMPILE_TYPE_PKG_SPEC:
-	  case PLCSQL_COMPILE_TYPE_PKG_BODY:
 	  {
 	    deserializator.unpack_all (translated_code, class_name, compiled_code);
 
@@ -246,6 +245,10 @@ namespace cubpl
 	  }
 
 	  break;
+
+	  case PLCSQL_COMPILE_TYPE_PKG_BODY:
+	    // nothing more to unpack
+	    break;
 
 	  default:
 	    assert (false);
@@ -858,7 +861,7 @@ namespace cubpl
   void
   pkg_var::unpack (cubpacking::unpacker &deserializator)
   {
-    deserializator.unpack_all (data_type, prec, scale, flags, name, init_value, comment);
+    deserializator.unpack_all (data_type, prec, scale, flags, name, comment);
   }
 
   pkg_exception::pkg_exception()

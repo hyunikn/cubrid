@@ -77,7 +77,6 @@ public class DeclConst extends DeclIdTypeDeclared {
                 typeSpec.type.scale,
                 ServerConstants.PKG_VAR_CONSTANT | (notNull ? ServerConstants.PKG_VAR_NOT_NULL : 0),
                 name,
-                (val == null ? null : val.ctx.getText()),
                 comment);
     }
 }

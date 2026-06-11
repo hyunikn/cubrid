@@ -298,7 +298,6 @@ namespace cubpl
     int scale;
     int flags;
     string name;
-    string init_value;
     string comment;
   };
 

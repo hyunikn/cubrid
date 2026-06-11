@@ -1604,7 +1604,7 @@ cleanup0:
 
 // it only adds a record, but not updates an existing one, in _db_package_code table
 static int
-sp_add_pkg_code (MOP *mop_out, const char *pkg_unique_name, const char *class_name,
+sp_set_pkg_code (MOP *mop_out, const char *pkg_unique_name, const char *class_name,
 		 const char *scode_spec, const char *scode_body, const char *ocode)
 {
 
@@ -1613,20 +1613,44 @@ sp_add_pkg_code (MOP *mop_out, const char *pkg_unique_name, const char *class_na
   DB_VALUE value;
   int err;
 
-  // create an object template to edit
-  classobj = db_find_class (CT_PACKAGE_CODE_NAME);
-  if (classobj == NULL)
-    {
-      ASSERT_ERROR_AND_SET (err);
-      goto error;
-    }
+  // get object template to edit
+  {
+    MOP mop;
+    DB_OBJECT *classobj;
 
-  obt = dbt_create_object_internal (classobj, false);
-  if (!obt)
-    {
-      ASSERT_ERROR_AND_SET (err);
-      goto error;
-    } // side effect 0
+    mop = jsp_find_pkg_code (pkg_unique_name);
+    if (mop)
+      {
+	// it can exist because package body can have already been created
+	obt = dbt_edit_object (mop);
+	if (!obt)
+	  {
+	    ASSERT_ERROR_AND_SET (err);
+	    goto error;
+	  }
+      }
+    else
+      {
+	if (er_errid() != NO_ERROR)
+	  {
+	    err = er_errid();
+	    goto error;
+	  }
+
+	classobj = db_find_class (CT_PACKAGE_CODE_NAME);
+	if (classobj == NULL)
+	  {
+	    ASSERT_ERROR_AND_SET (err);
+	    goto error;
+	  }
+	obt = dbt_create_object_internal (classobj, false);
+	if (!obt)
+	  {
+	    ASSERT_ERROR_AND_SET (err);
+	    goto error;
+	  } // side effect 0
+      }
+  }
 
   // attribute pkg_unique_name
   db_make_string (&value, pkg_unique_name);
@@ -1787,12 +1811,15 @@ sp_add_pkg_sp_arg (MOP *mop_out, const int idx, const cubpl::pkg_sp_arg arg)
     }
 
   // attribute default_value
-  db_make_string (&value, arg.default_value.data());
-  err = dbt_put_internal (obt, SP_ARG_ATTR_DEFAULT_VALUE, &value);
-  pr_clear_value (&value);
-  if (err != NO_ERROR)
+  if (arg.default_value.length() > 0)
     {
-      goto cleanup0;
+      db_make_string (&value, arg.default_value.data());
+      err = dbt_put_internal (obt, SP_ARG_ATTR_DEFAULT_VALUE, &value);
+      pr_clear_value (&value);
+      if (err != NO_ERROR)
+	{
+	  goto cleanup0;
+	}
     }
 
   // attribute is_optional
@@ -1804,12 +1831,15 @@ sp_add_pkg_sp_arg (MOP *mop_out, const int idx, const cubpl::pkg_sp_arg arg)
     }
 
   // attribute comment
-  db_make_string (&value, arg.comment.data());
-  err = dbt_put_internal (obt, SP_ARG_ATTR_COMMENT, &value);
-  pr_clear_value (&value);
-  if (err != NO_ERROR)
+  if (arg.comment.length() > 0)
     {
-      goto cleanup0;
+      db_make_string (&value, arg.comment.data());
+      err = dbt_put_internal (obt, SP_ARG_ATTR_COMMENT, &value);
+      pr_clear_value (&value);
+      if (err != NO_ERROR)
+	{
+	  goto cleanup0;
+	}
     }
 
   // finish object
@@ -1842,7 +1872,7 @@ error:
 
 static int
 sp_add_pkg_sp (MOP *mop_out, MOP owner, DB_VALUE &current_datetime,
-	       const char *pkg_unique_name, const char *pkg_name, const cubpl::pkg_sp &sp)
+	       const char *pkg_unique_name, const char *pkg_name, const char *class_name, const cubpl::pkg_sp &sp)
 {
   DB_OTMPL *obt;
   DB_OBJECT *object, *sp_arg_obj, *classobj, *arg_classobj;
@@ -1941,27 +1971,23 @@ sp_add_pkg_sp (MOP *mop_out, MOP owner, DB_VALUE &current_datetime,
       goto cleanup0;
     }
 
-  // attribute target_class and target_method
-  {
-    std::string target_class, target_method;
-    sp_split_target_signature (sp.java_signature, target_class, target_method);
+  // attribute target_class
+  db_make_string (&value, class_name);
+  err = dbt_put_internal (obt, SP_ATTR_TARGET_CLASS, &value);
+  pr_clear_value (&value);
+  if (err != NO_ERROR)
+    {
+      goto cleanup0;
+    }
 
-    db_make_string (&value, target_class.data());
-    err = dbt_put_internal (obt, SP_ATTR_TARGET_CLASS, &value);
-    pr_clear_value (&value);
-    if (err != NO_ERROR)
-      {
-	goto cleanup0;
-      }
-
-    db_make_string (&value, target_method.data());
-    err = dbt_put_internal (obt, SP_ATTR_TARGET_METHOD, &value);
-    pr_clear_value (&value);
-    if (err != NO_ERROR)
-      {
-	goto cleanup0;
-      }
-  }
+  // attribute target_method
+  db_make_string (&value, sp.java_signature.data());
+  err = dbt_put_internal (obt, SP_ATTR_TARGET_METHOD, &value);
+  pr_clear_value (&value);
+  if (err != NO_ERROR)
+    {
+      goto cleanup0;
+    }
 
   // attribute owner
   db_make_object (&value, owner);
@@ -1981,12 +2007,15 @@ sp_add_pkg_sp (MOP *mop_out, MOP owner, DB_VALUE &current_datetime,
     }
 
   // attribute comment
-  db_make_string (&value, sp.comment.data());
-  err = dbt_put_internal (obt, SP_ATTR_COMMENT, &value);
-  pr_clear_value (&value);
-  if (err != NO_ERROR)
+  if (sp.comment.length() > 0)
     {
-      goto cleanup0;
+      db_make_string (&value, sp.comment.data());
+      err = dbt_put_internal (obt, SP_ATTR_COMMENT, &value);
+      pr_clear_value (&value);
+      if (err != NO_ERROR)
+	{
+	  goto cleanup0;
+	}
     }
 
   // attribute created_time
@@ -2218,15 +2247,6 @@ sp_add_pkg_var (MOP *mop_out, const char *pkg_unique_name, const cubpl::pkg_var 
       goto cleanup0;
     }
 
-  // attribute init_value
-  db_make_string (&value, var.init_value.data());
-  err = dbt_put_internal (obt, PKG_VAR_ATTR_INIT_VALUE, &value);
-  pr_clear_value (&value);
-  if (err != NO_ERROR)
-    {
-      goto cleanup0;
-    }
-
   // attribute flags
   db_make_int (&value, var.flags);
   err = dbt_put_internal (obt, PKG_VAR_ATTR_FLAGS, &value);
@@ -2236,12 +2256,15 @@ sp_add_pkg_var (MOP *mop_out, const char *pkg_unique_name, const cubpl::pkg_var 
     }
 
   // attribute comment
-  db_make_string (&value, var.comment.data());
-  err = dbt_put_internal (obt, PKG_VAR_ATTR_COMMENT, &value);
-  pr_clear_value (&value);
-  if (err != NO_ERROR)
+  if (var.comment.length() > 0)
     {
-      goto cleanup0;
+      db_make_string (&value, var.comment.data());
+      err = dbt_put_internal (obt, PKG_VAR_ATTR_COMMENT, &value);
+      pr_clear_value (&value);
+      if (err != NO_ERROR)
+	{
+	  goto cleanup0;
+	}
     }
 
   // finish object
@@ -2315,12 +2338,15 @@ sp_add_pkg_exception (MOP *mop_out, const char *pkg_unique_name,
     }
 
   // attribute comment
-  db_make_string (&value, exception.comment.data());
-  err = dbt_put_internal (obt, PKG_EXCEPTION_ATTR_COMMENT, &value);
-  pr_clear_value (&value);
-  if (err != NO_ERROR)
+  if (exception.comment.length() > 0)
     {
-      goto cleanup0;
+      db_make_string (&value, exception.comment.data());
+      err = dbt_put_internal (obt, PKG_EXCEPTION_ATTR_COMMENT, &value);
+      pr_clear_value (&value);
+      if (err != NO_ERROR)
+	{
+	  goto cleanup0;
+	}
     }
 
   // finish object
@@ -2439,12 +2465,15 @@ sp_add_pkg_cursor (MOP *mop_out, const char *pkg_unique_name, const cubpl::pkg_c
   }
 
   // attribute comment
-  db_make_string (&value, cursor.comment.data());
-  err = dbt_put_internal (obt, PKG_CURSOR_ATTR_COMMENT, &value);
-  pr_clear_value (&value);
-  if (err != NO_ERROR)
+  if (cursor.comment.length() > 0)
     {
-      goto cleanup0;
+      db_make_string (&value, cursor.comment.data());
+      err = dbt_put_internal (obt, PKG_CURSOR_ATTR_COMMENT, &value);
+      pr_clear_value (&value);
+      if (err != NO_ERROR)
+	{
+	  goto cleanup0;
+	}
     }
 
   // finish object
@@ -2555,12 +2584,15 @@ sp_add_pkg_rec_type (MOP *mop_out, const char *pkg_unique_name,
   }
 
   // attribute comment
-  db_make_string (&value, rec_type.comment.data());
-  err = dbt_put_internal (obt, PKG_RECORD_TYPE_ATTR_COMMENT, &value);
-  pr_clear_value (&value);
-  if (err != NO_ERROR)
+  if (rec_type.comment.length() > 0)
     {
-      goto cleanup0;
+      db_make_string (&value, rec_type.comment.data());
+      err = dbt_put_internal (obt, PKG_RECORD_TYPE_ATTR_COMMENT, &value);
+      pr_clear_value (&value);
+      if (err != NO_ERROR)
+	{
+	  goto cleanup0;
+	}
     }
 
   // finish object
@@ -2667,10 +2699,10 @@ sp_add_pkg_and_related (const char *unique_name, const char *owner_name, MOP own
       goto cleanup2;
     }
 
-  // insert into _db_package_code
+  // insert or update into _db_package_code
   {
     const char *ocode = pkg_compile_response.compiled_code.data();
-    err = sp_add_pkg_code (&mop, unique_name, class_name, scode_spec, scode_body, ocode);
+    err = sp_set_pkg_code (&mop, unique_name, class_name, scode_spec, scode_body, ocode);
     if (err != NO_ERROR)
       {
 	goto cleanup2;
@@ -2697,7 +2729,7 @@ sp_add_pkg_and_related (const char *unique_name, const char *owner_name, MOP own
     i = 0;
     for (const cubpl::pkg_sp &sp: pkg_compile_response.sp)
       {
-	err = sp_add_pkg_sp (&mop, owner, current_datetime, unique_name, pkg_name, sp);
+	err = sp_add_pkg_sp (&mop, owner, current_datetime, unique_name, pkg_name, class_name, sp);
 	if (err != NO_ERROR)
 	  {
 	    set_free (seq);

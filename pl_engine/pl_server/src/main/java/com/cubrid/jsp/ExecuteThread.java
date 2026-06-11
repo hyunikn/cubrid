@@ -402,42 +402,52 @@ public class ExecuteThread extends Thread {
             CompileRequest request = new CompileRequest(unpacker);
             response = PlcsqlCompilerMain.compilePLCSQL(request);
             if (response.errCode == 0) {
-                MemoryJavaCompiler compiler = new MemoryJavaCompiler();
-                SourceCode sCode = new SourceCode(response.className, response.translated);
+                switch (response.type) {
+                    case CompileRequest.PLCSQL_COMPILE_TYPE_SP:
+                    case CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC:
+                        MemoryJavaCompiler compiler = new MemoryJavaCompiler();
+                        SourceCode sCode = new SourceCode(response.className, response.translated);
 
-                // dump translated code into $CUBRID_TMP
-                if (Context.getSystemParameterBool(SysParam.STORED_PROCEDURE_DUMP_ICODE)) {
+                        // dump translated code into $CUBRID_TMP
+                        if (Context.getSystemParameterBool(SysParam.STORED_PROCEDURE_DUMP_ICODE)) {
 
-                    Path dirPath = Paths.get(Server.getConfig().getTmpPath() + "/icode");
-                    if (Files.notExists(dirPath)) {
-                        Files.createDirectories(dirPath);
-                    }
+                            Path dirPath = Paths.get(Server.getConfig().getTmpPath() + "/icode");
+                            if (Files.notExists(dirPath)) {
+                                Files.createDirectories(dirPath);
+                            }
 
-                    Path path = dirPath.resolve(response.className + ".java");
-                    Files.write(path, response.translated.getBytes(Context.getSessionCharset()));
+                            Path path = dirPath.resolve(response.className + ".java");
+                            Files.write(
+                                    path,
+                                    response.translated.getBytes(Context.getSessionCharset()));
+                        }
+
+                        CompiledCodeSet codeSet = compiler.compile(sCode);
+
+                        int mode = 1; // 0: temp file mode, 1: memory stream mode
+                        byte[] data = null;
+
+                        // write to persistent
+                        if (mode == 0) {
+                            Path jarPath =
+                                    ClassLoaderManager.getDynamicPath()
+                                            .resolve(response.className + ".jar");
+                            OutputStream jarStream = Files.newOutputStream(jarPath);
+                            writeJar(codeSet, jarStream);
+                            data = Files.readAllBytes(jarPath);
+                            Files.deleteIfExists(jarPath);
+                        } else {
+                            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                            writeJar(codeSet, baos);
+                            data = baos.toByteArray();
+                        }
+
+                        response.compiledCode = Base64.getEncoder().encode(data);
+                        break;
+
+                    case CompileRequest.PLCSQL_COMPILE_TYPE_PKG_BODY:
+                        // do not compile: the request is just for syntax check
                 }
-
-                CompiledCodeSet codeSet = compiler.compile(sCode);
-
-                int mode = 1; // 0: temp file mode, 1: memory stream mode
-                byte[] data = null;
-
-                // write to persistent
-                if (mode == 0) {
-                    Path jarPath =
-                            ClassLoaderManager.getDynamicPath()
-                                    .resolve(response.className + ".jar");
-                    OutputStream jarStream = Files.newOutputStream(jarPath);
-                    writeJar(codeSet, jarStream);
-                    data = Files.readAllBytes(jarPath);
-                    Files.deleteIfExists(jarPath);
-                } else {
-                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                    writeJar(codeSet, baos);
-                    data = baos.toByteArray();
-                }
-
-                response.compiledCode = Base64.getEncoder().encode(data);
             }
         } catch (Exception e) {
             boolean hasExceptionMessage = (e.getMessage() != null && !e.getMessage().isEmpty());

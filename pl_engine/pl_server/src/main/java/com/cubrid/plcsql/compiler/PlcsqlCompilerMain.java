@@ -362,13 +362,16 @@ public class PlcsqlCompilerMain {
 
         if (type == CompileRequest.PLCSQL_COMPILE_TYPE_SP) {
 
-            return new CompileResponse(
-                    CompileRequest.PLCSQL_COMPILE_TYPE_SP,
-                    javaCode,
-                    unitSp.getClassName(),
-                    unitSp.getJavaSignature(),
-                    unitSp.routine.sqlDataAccess,
-                    typeChecker.dependencies);
+            CompileResponse resp =
+                    new CompileResponse(
+                            CompileRequest.PLCSQL_COMPILE_TYPE_SP,
+                            javaCode,
+                            unitSp.getClassName(),
+                            unitSp.getJavaSignature(),
+                            unitSp.routine.sqlDataAccess,
+                            typeChecker.dependencies);
+            resp.referencedClasses = converter.referencedClasses;
+            return resp;
         } else if (type == CompileRequest.PLCSQL_COMPILE_TYPE_PKG_SPEC) {
 
             CompileResponse resp =
@@ -377,6 +380,7 @@ public class PlcsqlCompilerMain {
                             javaCode,
                             unitPkg.getClassName(),
                             typeChecker.dependencies);
+            resp.referencedClasses = converter.referencedClasses;
 
             assert converter.pkgSpecItems != null;
             for (Decl d : converter.pkgSpecItems.nodes) {

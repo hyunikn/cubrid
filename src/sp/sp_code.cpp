@@ -25,10 +25,16 @@
 #include <unordered_map>
 #include <string>
 
+#include <cstring>
+
 #include "dbtype.h"
 #include "heap_file.h"
 #include "object_representation_sr.h"
+#include "oid.h"
+#include "schema_system_catalog_constants.h"
 #include "sp_constants.hpp"
+#include "storage_common.h"
+#include "xserver_interface.h"
 
 // XXX: SHOULD BE THE LAST INCLUDE HEADER
 #include "memory_wrapper.hpp"
@@ -255,4 +261,295 @@ exit_on_error:
   (void) heap_scancache_end (thread_p, &scan);
 
   return error;
+}
+
+// resolve the ordinal attribute id of attr_name within class_oid (-1 on not found)
+static int
+sp_find_attrid_by_name (THREAD_ENTRY *thread_p, const OID *class_oid, const char *attr_name, ATTR_ID &attrid_out)
+{
+  HEAP_SCANCACHE scan;
+  RECDES class_record;
+  HEAP_CACHE_ATTRINFO attr_info;
+  int i, error = NO_ERROR;
+  char *string = NULL;
+  int alloced_string = 0;
+  ATTR_ID attrid = -1;
+
+  if (heap_scancache_quick_start_with_class_oid (thread_p, &scan, (OID *) class_oid) != NO_ERROR)
+    {
+      return ER_FAILED;
+    }
+  if (heap_get_class_record (thread_p, class_oid, &class_record, &scan, PEEK) != S_SUCCESS)
+    {
+      heap_scancache_end (thread_p, &scan);
+      return ER_FAILED;
+    }
+  error = heap_attrinfo_start (thread_p, class_oid, -1, NULL, &attr_info);
+  if (error != NO_ERROR)
+    {
+      heap_scancache_end (thread_p, &scan);
+      return error;
+    }
+
+  for (i = 0; i < attr_info.num_values; i++)
+    {
+      string = NULL;
+      alloced_string = 0;
+
+      if (or_get_attrname (&class_record, i, &string, &alloced_string) != NO_ERROR)
+	{
+	  error = ER_FAILED;
+	  break;
+	}
+
+      bool match = (string != NULL && strcmp (string, attr_name) == 0);
+
+      if (string != NULL && alloced_string)
+	{
+	  db_private_free_and_init (thread_p, string);
+	}
+
+      if (match)
+	{
+	  attrid = i;
+	  break;
+	}
+    }
+
+  heap_attrinfo_end (thread_p, &attr_info);
+  heap_scancache_end (thread_p, &scan);
+
+  if (error != NO_ERROR)
+    {
+      return error;
+    }
+  if (attrid == -1)
+    {
+      return ER_FAILED;
+    }
+  attrid_out = attrid;
+  return NO_ERROR;
+}
+
+// read a string attribute (by name) of the object obj_oid into out
+static int
+sp_read_string_attr (THREAD_ENTRY *thread_p, const OID *class_oid, const OID *obj_oid, const char *attr_name,
+		     std::string &out)
+{
+  ATTR_ID attrid;
+  int error = sp_find_attrid_by_name (thread_p, class_oid, attr_name, attrid);
+  if (error != NO_ERROR)
+    {
+      return error;
+    }
+
+  HEAP_SCANCACHE scan_cache;
+  RECDES recdes = RECDES_INITIALIZER;
+  HEAP_CACHE_ATTRINFO attr_info;
+  DB_VALUE *cur_val;
+
+  heap_scancache_quick_start_with_class_oid (thread_p, &scan_cache, (OID *) class_oid);
+  if (heap_get_visible_version (thread_p, obj_oid, (OID *) class_oid, &recdes, &scan_cache, PEEK, NULL_CHN) != S_SUCCESS)
+    {
+      heap_scancache_end (thread_p, &scan_cache);
+      return ER_FAILED;
+    }
+
+  error = heap_attrinfo_start (thread_p, class_oid, 1, &attrid, &attr_info);
+  if (error != NO_ERROR)
+    {
+      heap_scancache_end (thread_p, &scan_cache);
+      return error;
+    }
+
+  error = heap_attrinfo_read_dbvalues (thread_p, obj_oid, &recdes, &attr_info);
+  if (error != NO_ERROR)
+    {
+      heap_attrinfo_end (thread_p, &attr_info);
+      heap_scancache_end (thread_p, &scan_cache);
+      return error;
+    }
+
+  cur_val = heap_attrinfo_access (attrid, &attr_info);
+  if (cur_val != NULL && !DB_IS_NULL (cur_val) && db_get_string (cur_val) != NULL)
+    {
+      out.assign (db_get_string (cur_val), db_get_string_size (cur_val));
+    }
+  else
+    {
+      out.clear ();
+    }
+
+  heap_attrinfo_end (thread_p, &attr_info);
+  heap_scancache_end (thread_p, &scan_cache);
+  return NO_ERROR;
+}
+
+// find the object whose string attribute attr_name equals key; found_oid is set NULL if none
+static int
+sp_find_oid_by_string_attr (THREAD_ENTRY *thread_p, const OID *class_oid, const char *attr_name, const char *key,
+			    OID *found_oid)
+{
+  HFID hfid;
+  ATTR_ID attrid;
+  int error = NO_ERROR;
+
+  OID_SET_NULL (found_oid);
+
+  if (heap_get_class_info (thread_p, class_oid, &hfid, NULL, NULL) != NO_ERROR)
+    {
+      return ER_FAILED;
+    }
+  error = sp_find_attrid_by_name (thread_p, class_oid, attr_name, attrid);
+  if (error != NO_ERROR)
+    {
+      return error;
+    }
+
+  HEAP_SCANCACHE scan_cache;
+  if (heap_scancache_start (thread_p, &scan_cache, &hfid, class_oid, true, NULL) != NO_ERROR)
+    {
+      return ER_FAILED;
+    }
+
+  HEAP_CACHE_ATTRINFO attr_info;
+  if (heap_attrinfo_start (thread_p, class_oid, 1, &attrid, &attr_info) != NO_ERROR)
+    {
+      heap_scancache_end (thread_p, &scan_cache);
+      return ER_FAILED;
+    }
+
+  OID oid;
+  RECDES recdes = RECDES_INITIALIZER;
+  SCAN_CODE scan;
+
+  scan = heap_first (thread_p, &hfid, (OID *) class_oid, &oid, &recdes, &scan_cache, PEEK);
+  while (scan == S_SUCCESS)
+    {
+      if (heap_attrinfo_read_dbvalues (thread_p, &oid, &recdes, &attr_info) != NO_ERROR)
+	{
+	  error = ER_FAILED;
+	  break;
+	}
+
+      DB_VALUE *v = heap_attrinfo_access (attrid, &attr_info);
+      if (v != NULL && !DB_IS_NULL (v) && db_get_string (v) != NULL && strcmp (db_get_string (v), key) == 0)
+	{
+	  COPY_OID (found_oid, &oid);
+	  break;
+	}
+
+      scan = heap_next (thread_p, &hfid, (OID *) class_oid, &oid, &recdes, &scan_cache, PEEK);
+    }
+
+  heap_attrinfo_end (thread_p, &attr_info);
+  heap_scancache_end (thread_p, &scan_cache);
+  return error;
+}
+
+int
+sp_get_code_by_name (THREAD_ENTRY *thread_p, const std::string &class_name, const std::string &req_compile_id,
+		     int &status, std::string &out_compile_id, std::string &out_ocode)
+{
+  int error = NO_ERROR;
+  bool is_pkg = (class_name.compare (0, 5, "Pckg_") == 0);
+
+  OID code_class_oid;
+  OID code_oid;
+  std::string compile_id;
+
+  status = SP_CODE_FETCH_NOT_FOUND;
+
+  if (!is_pkg)
+    {
+      // stored procedure / function: _db_stored_procedure_code keyed by name (= class name)
+      OID *sp_code_class = oid_Sp_code_class_oid;
+
+      error = sp_find_oid_by_string_attr (thread_p, sp_code_class, SP_CODE_ATTR_NAME, class_name.c_str (), &code_oid);
+      if (error != NO_ERROR)
+	{
+	  return error;
+	}
+      if (OID_ISNULL (&code_oid))
+	{
+	  return NO_ERROR;	// not found
+	}
+
+      COPY_OID (&code_class_oid, sp_code_class);
+      error = sp_read_string_attr (thread_p, &code_class_oid, &code_oid, SP_CODE_ATTR_COMPILE_ID, compile_id);
+      if (error != NO_ERROR)
+	{
+	  return error;
+	}
+    }
+  else
+    {
+      // package: _db_package (target_class -> unique_name, compile_id), _db_package_code (pkg_unique_name -> ocode)
+      OID pkg_class_oid;
+      OID pkg_code_class_oid;
+      OID pkg_oid;
+      std::string unique_name;
+
+      if (xlocator_find_class_oid (thread_p, CT_PACKAGE_NAME, &pkg_class_oid, NULL_LOCK) != LC_CLASSNAME_EXIST)
+	{
+	  return ER_FAILED;
+	}
+      error =
+	      sp_find_oid_by_string_attr (thread_p, &pkg_class_oid, PKG_ATTR_TARGET_CLASS, class_name.c_str (), &pkg_oid);
+      if (error != NO_ERROR)
+	{
+	  return error;
+	}
+      if (OID_ISNULL (&pkg_oid))
+	{
+	  return NO_ERROR;	// not found
+	}
+
+      error = sp_read_string_attr (thread_p, &pkg_class_oid, &pkg_oid, PKG_ATTR_UNIQUE_NAME, unique_name);
+      if (error != NO_ERROR)
+	{
+	  return error;
+	}
+      error = sp_read_string_attr (thread_p, &pkg_class_oid, &pkg_oid, PKG_ATTR_COMPILE_ID, compile_id);
+      if (error != NO_ERROR)
+	{
+	  return error;
+	}
+
+      if (xlocator_find_class_oid (thread_p, CT_PACKAGE_CODE_NAME, &pkg_code_class_oid, NULL_LOCK) != LC_CLASSNAME_EXIST)
+	{
+	  return ER_FAILED;
+	}
+      error =
+	      sp_find_oid_by_string_attr (thread_p, &pkg_code_class_oid, PKG_CODE_ATTR_PKG_UNIQUE_NAME,
+					  unique_name.c_str (), &code_oid);
+      if (error != NO_ERROR)
+	{
+	  return error;
+	}
+      if (OID_ISNULL (&code_oid))
+	{
+	  return NO_ERROR;	// not found
+	}
+      COPY_OID (&code_class_oid, &pkg_code_class_oid);
+    }
+
+  // compare compile_id: if the caller already has the current version, skip shipping the (large) ocode
+  if (!req_compile_id.empty () && req_compile_id == compile_id)
+    {
+      status = SP_CODE_FETCH_UNCHANGED;
+      return NO_ERROR;
+    }
+
+  error =
+	  sp_read_string_attr (thread_p, &code_class_oid, &code_oid, is_pkg ? PKG_CODE_ATTR_OCODE : SP_CODE_ATTR_OCODE,
+			       out_ocode);
+  if (error != NO_ERROR)
+    {
+      return error;
+    }
+
+  status = SP_CODE_FETCH_CHANGED;
+  out_compile_id = compile_id;
+  return NO_ERROR;
 }

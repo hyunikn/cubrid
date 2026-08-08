@@ -580,6 +580,10 @@ exit:
 	error_code = callback_get_code_attr (thread_ref, unpacker);
 	break;
 
+      case METHOD_CALLBACK_GET_CODE_BY_NAME:
+	error_code = callback_get_code_by_name (thread_ref, unpacker);
+	break;
+
       case METHOD_CALLBACK_SET_PL_SESSION_PARAM:
 	error_code = callback_set_pl_session_param (thread_ref, unpacker);
 	break;
@@ -1033,6 +1037,42 @@ exit:
       }
 
     db_value_clear (&res);
+
+    error = m_stack->send_data_to_java (blk);
+    blk.freemem ();
+
+    return error;
+  }
+
+  int
+  executor::callback_get_code_by_name (cubthread::entry &thread_ref, packing_unpacker &unpacker)
+  {
+    int error = NO_ERROR;
+
+    std::string class_name;
+    std::string req_compile_id;
+    unpacker.unpack_all (class_name, req_compile_id);
+
+    int status = SP_CODE_FETCH_NOT_FOUND;
+    std::string compile_id;
+    std::string ocode;
+
+    error = sp_get_code_by_name (&thread_ref, class_name, req_compile_id, status, compile_id, ocode);
+
+    cubmem::block blk;
+    if (error != NO_ERROR)
+      {
+	blk = std::move (pack_data_block (error));
+      }
+    else if (status == SP_CODE_FETCH_CHANGED)
+      {
+	blk = std::move (pack_data_block (error, status, compile_id, ocode));
+      }
+    else
+      {
+	// SP_CODE_FETCH_NOT_FOUND or SP_CODE_FETCH_UNCHANGED: no code shipped
+	blk = std::move (pack_data_block (error, status));
+      }
 
     error = m_stack->send_data_to_java (blk);
     blk.freemem ();

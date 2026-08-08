@@ -265,6 +265,7 @@ enum index_sp_arg_attr
 
 #define SP_CODE_ATTR_LIST    \
     MAP_LIST_ITEM(NAME) \
+    MAP_LIST_ITEM(COMPILE_ID) \
     MAP_LIST_ITEM(CREATED_TIME) \
     MAP_LIST_ITEM(OWNER) \
     MAP_LIST_ITEM(IS_STATIC) \
@@ -275,6 +276,7 @@ enum index_sp_arg_attr
     MAP_LIST_ITEM(OCODE)
 
 #define SP_CODE_ATTR_NAME                   "name"
+#define SP_CODE_ATTR_COMPILE_ID             "compile_id"
 #define SP_CODE_ATTR_CREATED_TIME           "created_time"
 #define SP_CODE_ATTR_OWNER                  "owner"
 #define SP_CODE_ATTR_IS_STATIC              "is_static"
@@ -411,7 +413,8 @@ enum METHOD_CALLBACK_RESPONSE
   METHOD_CALLBACK_CHANGE_RIGHTS = 200,
 
   // CLASS ACCESS
-  METHOD_CALLBACK_GET_CODE_ATTR = 201
+  METHOD_CALLBACK_GET_CODE_ATTR = 201,
+  METHOD_CALLBACK_GET_CODE_BY_NAME = 202
 };
 
 enum METHOD_ARG_MODE

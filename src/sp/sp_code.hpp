@@ -32,4 +32,19 @@
 #include "query_manager.h"
 
 int sp_get_code_attr (THREAD_ENTRY *thread_p, const std::string &attr_name, const OID *sp_oidp, DB_VALUE *result);
+
+// result of looking up object code by (generated) class name
+enum SP_CODE_FETCH_STATUS
+{
+  SP_CODE_FETCH_NOT_FOUND = 0,	// no SP/package with the given class name (e.g. dropped)
+  SP_CODE_FETCH_UNCHANGED = 1,	// stored compile_id equals the requested one
+  SP_CODE_FETCH_CHANGED = 2	// object code returned along with its compile_id
+};
+
+// Look up the object code (ocode) of a stored procedure or package by its generated Java class
+// name (Proc_.../Func_.../Pckg_...). Auth is bypassed - a referenced unit's code must be
+// loadable regardless of the caller's privileges.
+int sp_get_code_by_name (THREAD_ENTRY *thread_p, const std::string &class_name,
+			 const std::string &req_compile_id, int &status, std::string &out_compile_id,
+			 std::string &out_ocode);
 #endif				/* _SP_CODE_HPP_ */

@@ -412,7 +412,8 @@ public class ExecuteThread extends Thread {
                                     response.translated.getBytes(Context.getSessionCharset()));
                         }
 
-                        CompiledCodeSet codeSet = compiler.compile(sCode);
+                        CompiledCodeSet codeSet =
+                                compiler.compile(sCode, response.referencedClasses);
 
                         byte[] data = null;
 

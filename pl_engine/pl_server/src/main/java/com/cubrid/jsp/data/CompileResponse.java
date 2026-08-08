@@ -55,6 +55,10 @@ public class CompileResponse implements PackableObject {
     public byte[] compiledCode = null;
     private Set<Dependency> dependencies = null;
 
+    // generated Java class names of referenced external SPs/packages; used only in-process to feed
+    // their compiled code to javac (not packed to the server)
+    public Set<String> referencedClasses = null;
+
     // only for package spec
     public List<PkgSp> sp;
     public List<PkgVar> var;

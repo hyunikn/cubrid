@@ -67,7 +67,10 @@ public class ClassAccess {
         return code;
     }
 
-    public static CompiledCodeSet getObjectCodeOf(String mainClassName) {
+    // duringCompile distinguishes the request framing: while compiling, the request is handled by
+    // the compile handler (explicit outer request code); at run time it is handled by the executor's
+    // callback loop (code carried inside the payload).
+    public static CompiledCodeSet getObjectCodeOf(String mainClassName, boolean duringCompile) {
 
         // get the object code of given class name from ocode of _db_stored_procedure_code or
         // _db_package_code
@@ -81,7 +84,8 @@ public class ClassAccess {
 
             String[] compileIdRef = new String[1];
             byte[] jarCode =
-                    getObjectCodeBytesWithNameAndId(mainClassName, null, conn, compileIdRef);
+                    getObjectCodeBytesWithNameAndId(
+                            mainClassName, null, conn, compileIdRef, duringCompile);
             if (jarCode == null) {
                 return null;
             } else {
@@ -115,7 +119,7 @@ public class ClassAccess {
             String[] compileIdRef = new String[1];
             byte[] jarCode =
                     getObjectCodeBytesWithNameAndId(
-                            codeSet.mainClassName, codeSet.compileId, conn, compileIdRef);
+                            codeSet.mainClassName, codeSet.compileId, conn, compileIdRef, false);
             if (jarCode == null) {
                 return null;
             } else if (jarCode.length == 0) {
@@ -144,7 +148,11 @@ public class ClassAccess {
     private static final int STATUS_CHANGED = 2;
 
     private static byte[] getObjectCodeBytesWithNameAndId(
-            String mainClassName, String compileId, Connection conn, String[] compileIdRef) {
+            String mainClassName,
+            String compileId,
+            Connection conn,
+            String[] compileIdRef,
+            boolean duringCompile) {
         // Ask the server (via a dedicated protocol) for the ocode of the SP/package whose generated
         // class name is mainClassName. The server reads the catalog with authorization disabled, so
         // this works even when the referenced unit is owned by another user.
@@ -156,10 +164,20 @@ public class ClassAccess {
         // NOTE: conn is unused; the exchange goes through the execute-thread command channel.
         try {
             CUBRIDPacker packer = new CUBRIDPacker(ByteBuffer.allocate(1024));
-            packer.packInt(RequestCode.REQUEST_CODE_BY_NAME);
-            packer.packString(mainClassName);
-            packer.packString(compileId == null ? "" : compileId);
-            Context.getCurrentExecuteThread().sendCommand(packer.getBuffer());
+            if (duringCompile) {
+                // the compile handler dispatches on the explicit outer request code, so the payload
+                // carries only the arguments
+                packer.packString(mainClassName);
+                packer.packString(compileId == null ? "" : compileId);
+                Context.getCurrentExecuteThread()
+                        .sendCommand(RequestCode.REQUEST_CODE_BY_NAME, packer.getBuffer());
+            } else {
+                // the executor's callback loop reads the request code from the payload
+                packer.packInt(RequestCode.REQUEST_CODE_BY_NAME);
+                packer.packString(mainClassName);
+                packer.packString(compileId == null ? "" : compileId);
+                Context.getCurrentExecuteThread().sendCommand(packer.getBuffer());
+            }
 
             ByteBuffer responseBuffer = Context.getCurrentExecuteThread().receiveBuffer();
             CUBRIDUnpacker unpacker = new CUBRIDUnpacker(responseBuffer);

@@ -20,8 +20,12 @@
 
 #include <cstring>
 
+#include <string>
+
+#include "network_callback_sr.hpp"
 #include "pl_comm.h"
 #include "pl_execution_stack_context.hpp"
+#include "sp_code.hpp"
 
 // XXX: SHOULD BE THE LAST INCLUDE HEADER
 #include "memory_wrapper.hpp"
@@ -167,6 +171,40 @@ namespace cubpl
 		respone_unpacker.unpack_all (request);
 
 		error_code = m_stack->send_data_to_client_recv (bypass_block, request);
+	      }
+	    else if (code == METHOD_CALLBACK_GET_CODE_BY_NAME)
+	      {
+		// while compiling, the PL server fetches the object code of referenced SPs/packages
+		// so that their generated Java classes can be resolved by javac. Answer it here the
+		// same way the executor does at run time.
+		packing_unpacker respone_unpacker (payload_blk);
+		std::string class_name;
+		std::string req_compile_id;
+		respone_unpacker.unpack_all (class_name, req_compile_id);
+
+		int status = SP_CODE_FETCH_NOT_FOUND;
+		std::string cur_compile_id;
+		std::string ocode;
+		int err =
+			sp_get_code_by_name (m_stack->get_thread_entry (), class_name, req_compile_id, status,
+					     cur_compile_id, ocode);
+
+		cubmem::block blk;
+		if (err != NO_ERROR)
+		  {
+		    blk = std::move (pack_data_block (err));
+		  }
+		else if (status == SP_CODE_FETCH_CHANGED)
+		  {
+		    blk = std::move (pack_data_block (err, status, cur_compile_id, ocode));
+		  }
+		else
+		  {
+		    blk = std::move (pack_data_block (err, status));
+		  }
+
+		error_code = m_stack->send_data_to_java (blk);
+		blk.freemem ();
 	      }
 	    else
 	      {

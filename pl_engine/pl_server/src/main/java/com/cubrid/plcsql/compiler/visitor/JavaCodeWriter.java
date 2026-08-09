@@ -58,6 +58,18 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
 
     private Set<String> javaTypesUsed = new HashSet<>();
 
+    // true while generating the top-level declarations of a package: they become static members of
+    // the package class so they can be reached as Pckg_owner_name.MEMBER from other units. It is
+    // turned off inside routine bodies (whose declarations are ordinary local variables).
+    private boolean pkgTopLevel = false;
+
+    private String staticModifier() {
+        // package members are referenced from other units, which are loaded by different class
+        // loaders; across class loaders even same-package access needs "public", so they must be
+        // public (not merely package-private) static members
+        return pkgTopLevel ? "public static " : "";
+    }
+
     private String getJavaCodeOfType(TypeSpec tySpec) {
         return getJavaCodeOfType(tySpec.type);
     }
@@ -179,7 +191,10 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
     @Override
     public CodeToResolve visitUnitPkg(UnitPkg node) {
 
+        pkgTopLevel = true;
         CodeToResolve pkgItemsCode = visitNodeList(node.pkg.pkgItems);
+        pkgTopLevel = false;
+
         Object pkgInitCode;
         if (node.pkg.initializer == null) {
             pkgInitCode = "";
@@ -383,7 +398,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
 
     private static final String[] tmplDeclRoutine =
             new String[] {
-                "%'RETURN-TYPE'% %'METHOD-NAME'%(",
+                "%'MODIFIER'%%'RETURN-TYPE'% %'METHOD-NAME'%(",
                 "    %'+PARAMETERS'%",
                 "  ) throws Exception {",
                 "  %'+NULLIFY-OUT-PARAMETERS'%",
@@ -394,7 +409,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
 
     private static final String[] tmplDeclRoutineWithoutBody =
             new String[] {
-                "%'RETURN-TYPE'% %'METHOD-NAME'%(",
+                "%'MODIFIER'%%'RETURN-TYPE'% %'METHOD-NAME'%(",
                 "    %'+PARAMETERS'%",
                 "  ) {",
                 "  throw new IMPL_NOT_GIVEN();",
@@ -413,6 +428,8 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                         "DeclRoutine",
                         Misc.UNKNOWN_LINE_COLUMN,
                         tmplDeclRoutineWithoutBody,
+                        "%'MODIFIER'%",
+                        staticModifier(),
                         "%'RETURN-TYPE'%",
                         node.retTypeSpec == null ? "void" : getJavaCodeOfType(node.retTypeSpec),
                         "%'+PARAMETERS'%",
@@ -431,6 +448,11 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
 
             assert node.paramList != null;
 
+            // a package member routine is a static method; its body's own declarations, however,
+            // are ordinary local variables, so turn the flag off while visiting them
+            boolean saved = pkgTopLevel;
+            pkgTopLevel = false;
+
             // declarations
             Object codeDeclClass =
                     node.decls == null
@@ -446,22 +468,30 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
 
             String[] strNullifyOutParam = getNullifyOutParamCode(node.paramList);
 
-            return new CodeTemplate(
-                    "DeclRoutine",
-                    Misc.UNKNOWN_LINE_COLUMN,
-                    tmplDeclRoutine,
-                    "%'RETURN-TYPE'%",
-                    node.retTypeSpec == null ? "void" : getJavaCodeOfType(node.retTypeSpec),
-                    "%'+PARAMETERS'%",
-                    visitNodeList(node.paramList).setDelimiter(","),
-                    "%'+NULLIFY-OUT-PARAMETERS'%",
-                    strNullifyOutParam,
-                    "%'+DECL-CLASS'%",
-                    codeDeclClass,
-                    "%'+BODY'%",
-                    visitBody(node.body),
-                    "%'METHOD-NAME'%",
-                    node.name);
+            CodeToResolve ret =
+                    new CodeTemplate(
+                            "DeclRoutine",
+                            Misc.UNKNOWN_LINE_COLUMN,
+                            tmplDeclRoutine,
+                            "%'MODIFIER'%",
+                            saved ? "public static " : "",
+                            "%'RETURN-TYPE'%",
+                            node.retTypeSpec == null
+                                    ? "void"
+                                    : getJavaCodeOfType(node.retTypeSpec),
+                            "%'+PARAMETERS'%",
+                            visitNodeList(node.paramList).setDelimiter(","),
+                            "%'+NULLIFY-OUT-PARAMETERS'%",
+                            strNullifyOutParam,
+                            "%'+DECL-CLASS'%",
+                            codeDeclClass,
+                            "%'+BODY'%",
+                            visitBody(node.body),
+                            "%'METHOD-NAME'%",
+                            node.name);
+
+            pkgTopLevel = saved;
+            return ret;
         }
     }
 
@@ -500,11 +530,13 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
 
     private static final String[] tmplNotNullVar =
             new String[] {
-                "%'TYPE'%[] %'NAME'% = new %'TYPE'%[] { checkNotNull(",
+                "%'MODIFIER'%%'TYPE'%[] %'NAME'% = new %'TYPE'%[] { checkNotNull(",
                 "  %'+VAL'%, \"NOT NULL constraint violated\") };"
             };
     private static final String[] tmplNullableVar =
-            new String[] {"%'TYPE'%[] %'NAME'% = new %'TYPE'%[] {", "  %'+VAL'%", "};"};
+            new String[] {
+                "%'MODIFIER'%%'TYPE'%[] %'NAME'% = new %'TYPE'%[] {", "  %'+VAL'%", "};"
+            };
 
     @Override
     public CodeToResolve visitDeclVar(DeclVar node) {
@@ -515,9 +547,16 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
 
             String code;
             if (ty instanceof TypeRecord) {
-                code = String.format("%1$s[] %2$s = new %1$s[] { new %1$s() };", tyJava, node.name);
+                code =
+                        staticModifier()
+                                + String.format(
+                                        "%1$s[] %2$s = new %1$s[] { new %1$s() };", tyJava,
+                                        node.name);
             } else {
-                code = String.format("%1$s[] %2$s = new %1$s[] { null };", tyJava, node.name);
+                code =
+                        staticModifier()
+                                + String.format(
+                                        "%1$s[] %2$s = new %1$s[] { null };", tyJava, node.name);
             }
             return new CodeTemplate("DeclVar", Misc.UNKNOWN_LINE_COLUMN, code);
         } else {
@@ -525,6 +564,8 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                     "DeclVar",
                     node.notNull ? Misc.getLineColumnOf(node.ctx) : Misc.UNKNOWN_LINE_COLUMN,
                     node.notNull ? tmplNotNullVar : tmplNullableVar,
+                    "%'MODIFIER'%",
+                    staticModifier(),
                     "%'TYPE'%",
                     tyJava,
                     "%'NAME'%",
@@ -540,11 +581,11 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
 
     private static final String[] tmplNotNullConst =
             new String[] {
-                "final %'TYPE'% %'NAME'% = checkNotNull(",
+                "%'MODIFIER'%final %'TYPE'% %'NAME'% = checkNotNull(",
                 "  %'+VAL'%, \"NOT NULL constraint violated\");"
             };
     private static final String[] tmplNullableConst =
-            new String[] {"final %'TYPE'% %'NAME'% =", "  %'+VAL'%;"};
+            new String[] {"%'MODIFIER'%final %'TYPE'% %'NAME'% =", "  %'+VAL'%;"};
 
     @Override
     public CodeToResolve visitDeclConst(DeclConst node) {
@@ -553,6 +594,8 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                 "DeclConst",
                 node.notNull ? Misc.getLineColumnOf(node.ctx) : Misc.UNKNOWN_LINE_COLUMN,
                 node.notNull ? tmplNotNullConst : tmplNullableConst,
+                "%'MODIFIER'%",
+                staticModifier(),
                 "%'TYPE'%",
                 getJavaCodeOfType(node.typeSpec),
                 "%'NAME'%",
@@ -572,7 +615,9 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
 
             if (node.bodyDecl == null) {
                 String code =
-                        String.format("final Query %s = new QueryUnimplemented();", node.name);
+                        staticModifier()
+                                + String.format(
+                                        "final Query %s = new QueryUnimplemented();", node.name);
                 return new CodeTemplate("DeclCursor", Misc.UNKNOWN_LINE_COLUMN, code);
             } else {
                 // code gen for body must be done at the position of its package spec counterpart
@@ -585,12 +630,13 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
         } else {
 
             String code =
-                    String.format(
-                            "final Query %s = new Query(\"%s\", false); // param-ref-counts:%s, param-num-of-host-expr:%s",
-                            node.name,
-                            StringEscapeUtils.escapeJava(node.staticSql.rewritten),
-                            Arrays.toString(node.paramRefCounts),
-                            Arrays.toString(node.paramNumOfHostExpr));
+                    staticModifier()
+                            + String.format(
+                                    "final Query %s = new Query(\"%s\", false); // param-ref-counts:%s, param-num-of-host-expr:%s",
+                                    node.name,
+                                    StringEscapeUtils.escapeJava(node.staticSql.rewritten),
+                                    Arrays.toString(node.paramRefCounts),
+                                    Arrays.toString(node.paramNumOfHostExpr));
             return new CodeTemplate("DeclCursor", Misc.UNKNOWN_LINE_COLUMN, code);
         }
     }
@@ -602,7 +648,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
 
     @Override
     public CodeToResolve visitDeclException(DeclException node) {
-        String code = "class " + node.name + " extends $APP_ERROR {}";
+        String code = staticModifier() + "class " + node.name + " extends $APP_ERROR {}";
         return new CodeTemplate("DeclException", Misc.UNKNOWN_LINE_COLUMN, code);
     }
 
@@ -914,11 +960,68 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                 "))"
             };
 
+    // direct call to the generated Java class of a PL/CSQL routine/package member
+    private static String[] tmplExprGlobalFuncCall_direct =
+            new String[] {
+                "(new Object() { // global function call (direct): %'FUNC-NAME'%",
+                "  %'RETURN-TYPE'% invoke(%'PARAMETERS'%) throws Exception {",
+                "    %'+ALLOC-COERCED-OUT-ARGS'%",
+                "    %'RETURN-TYPE'% ret = %'TARGET-CLASS'%.%'METHOD-NAME'%(%'ARGS'%);",
+                "    %'+UPDATE-OUT-ARGS'%",
+                "    return ret;",
+                "  }",
+                "}.invoke(",
+                "  %'+ARGUMENTS'%",
+                "))"
+            };
+
+    // simple (unqualified) name = the last dot-separated segment
+    private static String simpleName(String qualifiedName) {
+        int dot = qualifiedName.lastIndexOf('.');
+        return dot < 0 ? qualifiedName : qualifiedName.substring(dot + 1);
+    }
+
     @Override
     public CodeToResolve visitExprGlobalFuncCall(ExprGlobalFuncCall node) {
 
         assert node.decl != null;
 
+        if (node.targetClass != null && !node.targetClass.isEmpty()) {
+            // PL/CSQL target: call the method of its generated Java class directly (same package,
+            // so the simple class name is enough)
+            int paramSize = node.decl.paramList.nodes.size();
+            String wrapperParam = getCallWrapperParam(paramSize, node.args, node.decl.paramList);
+            LocalCallCodeSnippets code =
+                    getLocalCallCodeSnippets(paramSize, node.args, node.decl.paramList);
+
+            CodeTemplate tmpl =
+                    new CodeTemplate(
+                            "ExprGlobalFuncCall (direct)",
+                            Misc.getLineColumnOf(node.ctx),
+                            tmplExprGlobalFuncCall_direct,
+                            "%'FUNC-NAME'%",
+                            node.name,
+                            "%'TARGET-CLASS'%",
+                            node.targetClass,
+                            "%'METHOD-NAME'%",
+                            simpleName(node.name),
+                            "%'RETURN-TYPE'%",
+                            getJavaCodeOfType(node.decl.retTypeSpec),
+                            "%'PARAMETERS'%",
+                            wrapperParam,
+                            "%'+ALLOC-COERCED-OUT-ARGS'%",
+                            code.allocCoercedOutArgs,
+                            "%'ARGS'%",
+                            code.argsToLocal,
+                            "%'+UPDATE-OUT-ARGS'%",
+                            code.updateOutArgs,
+                            "%'+ARGUMENTS'%",
+                            visitArguments(node.args, node.decl.paramList, true));
+
+            return applyCoercion(node.coercion, tmpl, node.ctx);
+        }
+
+        // Java SP target: call through a SQL CALL statement (unchanged)
         int argSize = node.args.nodes.size();
         String dynSql = String.format("?= call %s(%s)", node.name, getQuestionMarks(argSize));
         String wrapperParam = getCallWrapperParam(argSize, node.args, node.decl.paramList);
@@ -2481,11 +2584,56 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                 ");"
             };
 
+    // direct call to the generated Java class of a PL/CSQL routine/package member
+    private static String[] tmplStmtGlobalProcCall_direct =
+            new String[] {
+                "new Object() { // global procedure call (direct): %'PROC-NAME'%",
+                "  void invoke(%'PARAMETERS'%) throws Exception {",
+                "    %'+ALLOC-COERCED-OUT-ARGS'%",
+                "    %'TARGET-CLASS'%.%'METHOD-NAME'%(%'ARGS'%);",
+                "    %'+UPDATE-OUT-ARGS'%",
+                "  }",
+                "}.invoke(",
+                "  %'+ARGUMENTS'%",
+                ");"
+            };
+
     @Override
     public CodeToResolve visitStmtGlobalProcCall(StmtGlobalProcCall node) {
 
         assert node.decl != null;
 
+        if (node.targetClass != null && !node.targetClass.isEmpty()) {
+            // PL/CSQL target: call the method of its generated Java class directly (same package,
+            // so the simple class name is enough)
+            int paramSize = node.decl.paramList.nodes.size();
+            String wrapperParam = getCallWrapperParam(paramSize, node.args, node.decl.paramList);
+            LocalCallCodeSnippets code =
+                    getLocalCallCodeSnippets(paramSize, node.args, node.decl.paramList);
+
+            return new CodeTemplate(
+                    "StmtGlobalProcCall (direct)",
+                    Misc.getLineColumnOf(node.ctx),
+                    tmplStmtGlobalProcCall_direct,
+                    "%'PROC-NAME'%",
+                    node.name,
+                    "%'TARGET-CLASS'%",
+                    node.targetClass,
+                    "%'METHOD-NAME'%",
+                    simpleName(node.name),
+                    "%'PARAMETERS'%",
+                    wrapperParam,
+                    "%'+ALLOC-COERCED-OUT-ARGS'%",
+                    code.allocCoercedOutArgs,
+                    "%'ARGS'%",
+                    code.argsToLocal,
+                    "%'+UPDATE-OUT-ARGS'%",
+                    code.updateOutArgs,
+                    "%'+ARGUMENTS'%",
+                    visitArguments(node.args, node.decl.paramList, true));
+        }
+
+        // Java SP target: call through a SQL CALL statement (unchanged)
         int argSize = node.args.nodes.size();
         String dynSql = String.format("call %s(%s)", node.name, getQuestionMarks(argSize));
         String wrapperParam = getCallWrapperParam(argSize, node.args, node.decl.paramList);

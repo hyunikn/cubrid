@@ -235,6 +235,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                 gpc.decl = new DeclProc(null, ps.name, null, null, paramList, ps.directive);
 
                 gpc.targetClass = ps.targetClass;
+                gpc.uniqueName = ps.uniqueName;
                 if (ps.targetClass != null && !ps.targetClass.isEmpty()) {
                     referencedClasses.add(ps.targetClass);
                 }
@@ -299,6 +300,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                                 TypeSpec.getBogus(iStore, retType));
 
                 gfc.targetClass = fs.targetClass;
+                gfc.uniqueName = fs.uniqueName;
                 if (fs.targetClass != null && !fs.targetClass.isEmpty()) {
                     referencedClasses.add(fs.targetClass);
                 }

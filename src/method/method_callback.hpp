@@ -113,6 +113,7 @@ namespace cubmethod
 
       /* handle auth */
       int change_rights (packing_unpacker &unpacker);
+      int check_execute_auth (packing_unpacker &unpacker);
 
       /* ported from cas_handle */
       query_handler *new_query_handler ();

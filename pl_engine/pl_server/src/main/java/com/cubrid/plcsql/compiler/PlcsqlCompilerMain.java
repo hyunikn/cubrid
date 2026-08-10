@@ -348,7 +348,19 @@ public class PlcsqlCompilerMain {
         // ------------------------------------------
         // Java code generation
 
-        String javaCode = new JavaCodeWriter(iStore, sqlUsesInRecursiveCalls).buildCodeLines(unit);
+        // Assign each directly-referenced routine/package a stable slot in the unit's runtime
+        // EXECUTE-check cache (static boolean[] authFlags). Sorted so the mapping is deterministic
+        // between the field size and the per-call-site index.
+        java.util.List<String> refList = new java.util.ArrayList<>(converter.referencedClasses);
+        java.util.Collections.sort(refList);
+        java.util.Map<String, Integer> authFlagIndex = new java.util.LinkedHashMap<>();
+        for (int i = 0; i < refList.size(); i++) {
+            authFlagIndex.put(refList.get(i), i);
+        }
+
+        String javaCode =
+                new JavaCodeWriter(iStore, sqlUsesInRecursiveCalls, authFlagIndex)
+                        .buildCodeLines(unit);
 
         if (verbose) {
             logElapsedTime(logStore, "Java code generation", t0);

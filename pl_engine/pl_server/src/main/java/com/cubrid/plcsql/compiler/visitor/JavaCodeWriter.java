@@ -45,6 +45,7 @@ import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.antlr.v4.runtime.ParserRuleContext;
 import org.apache.commons.text.StringEscapeUtils;
@@ -79,9 +80,50 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
         return type.javaCode;
     }
 
-    public JavaCodeWriter(InstanceStore iStore, Set<SqlUse> sqlUsesInRecursiveCalls) {
+    // Maps the generated Java class name of each directly-referenced PL/CSQL routine/package to a
+    // slot in this unit's static boolean[] authFlags. The runtime EXECUTE check for a call site
+    // records its verdict in authFlags[slot] so it is performed only once per class load.
+    private final Map<String, Integer> authFlagIndex;
+
+    public JavaCodeWriter(
+            InstanceStore iStore,
+            Set<SqlUse> sqlUsesInRecursiveCalls,
+            Map<String, Integer> authFlagIndex) {
         this.iStore = iStore;
         this.sqlUsesReachableFromLoop = sqlUsesInRecursiveCalls;
+        this.authFlagIndex = authFlagIndex;
+    }
+
+    // static boolean[] holding, per directly-referenced routine/package, whether its runtime EXECUTE
+    // check has already passed in this class's loaded lifetime. Empty when the unit has no direct
+    // calls (then no field is emitted).
+    private Object getAuthFlagsDecl() {
+        int n = authFlagIndex.size();
+        if (n == 0) {
+            return "";
+        }
+        return new String[] {
+            "private static final boolean[] authFlags = new boolean[" + n + "];"
+        };
+    }
+
+    // Statements guarding a direct call site: on first reach, perform the runtime EXECUTE check and
+    // remember the (positive) verdict in authFlags. Returns "" for a target without a unique_name
+    // (e.g. a Java SP, which keeps the server-side CALL check) so no guard is emitted.
+    private Object getAuthCheckCode(String targetClass, String uniqueName) {
+        if (uniqueName == null
+                || uniqueName.isEmpty()
+                || targetClass == null
+                || !authFlagIndex.containsKey(targetClass)) {
+            return "";
+        }
+        int slot = authFlagIndex.get(targetClass);
+        return new String[] {
+            "if (!authFlags[" + slot + "]) {",
+            "  checkExecuteAuthorization(\"" + uniqueName + "\");",
+            "  authFlags[" + slot + "] = true;",
+            "}"
+        };
     }
 
     public List<String> codeLines = new ArrayList<>(); // no LinkedList : frequent access by indexes
@@ -148,6 +190,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                 "import static com.cubrid.plcsql.predefined.sp.SpLib.*;",
                 "public class %'CLASS-NAME'% {",
                 "  %'+GET-CONNECTION'%",
+                "  %'+AUTH-FLAGS'%",
                 "  %'+DECLARATIONS'%",
                 "  %'+OPT-INITIALIZER'%",
                 "  %'+RECORD-DEFS'%",
@@ -229,6 +272,8 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                 node.getClassName(),
                 "%'+GET-CONNECTION'%",
                 node.connectionRequired ? strGetConn : "",
+                "%'+AUTH-FLAGS'%",
+                getAuthFlagsDecl(),
                 "%'+DECLARATIONS'%",
                 pkgItemsCode,
                 "%'+OPT-INITIALIZER'%",
@@ -259,6 +304,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                 "import static com.cubrid.plcsql.predefined.sp.SpLib.*;",
                 "public class %'CLASS-NAME'% {",
                 "  %'+GET-CONNECTION'%",
+                "  %'+AUTH-FLAGS'%",
                 "  public static %'RETURN-TYPE'% %'METHOD-NAME'%(",
                 "      %'+PARAMETERS'%",
                 "    ) throws Exception {",
@@ -386,6 +432,8 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                 objParamArr,
                 "%'+GET-CONNECTION'%",
                 node.connectionRequired ? strGetConn : "",
+                "%'+AUTH-FLAGS'%",
+                getAuthFlagsDecl(),
                 "%'+RECORD-DEFS'%",
                 recordDefs,
                 "%'+RECORD-ASSIGN-FUNCS'%",
@@ -965,6 +1013,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
             new String[] {
                 "(new Object() { // global function call (direct): %'FUNC-NAME'%",
                 "  %'RETURN-TYPE'% invoke(%'PARAMETERS'%) throws Exception {",
+                "    %'+AUTH-CHECK'%",
                 "    %'+ALLOC-COERCED-OUT-ARGS'%",
                 "    %'RETURN-TYPE'% ret = %'TARGET-CLASS'%.%'METHOD-NAME'%(%'ARGS'%);",
                 "    %'+UPDATE-OUT-ARGS'%",
@@ -1001,6 +1050,8 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                             tmplExprGlobalFuncCall_direct,
                             "%'FUNC-NAME'%",
                             node.name,
+                            "%'+AUTH-CHECK'%",
+                            getAuthCheckCode(node.targetClass, node.uniqueName),
                             "%'TARGET-CLASS'%",
                             node.targetClass,
                             "%'METHOD-NAME'%",
@@ -2589,6 +2640,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
             new String[] {
                 "new Object() { // global procedure call (direct): %'PROC-NAME'%",
                 "  void invoke(%'PARAMETERS'%) throws Exception {",
+                "    %'+AUTH-CHECK'%",
                 "    %'+ALLOC-COERCED-OUT-ARGS'%",
                 "    %'TARGET-CLASS'%.%'METHOD-NAME'%(%'ARGS'%);",
                 "    %'+UPDATE-OUT-ARGS'%",
@@ -2617,6 +2669,8 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                     tmplStmtGlobalProcCall_direct,
                     "%'PROC-NAME'%",
                     node.name,
+                    "%'+AUTH-CHECK'%",
+                    getAuthCheckCode(node.targetClass, node.uniqueName),
                     "%'TARGET-CLASS'%",
                     node.targetClass,
                     "%'METHOD-NAME'%",

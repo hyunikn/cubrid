@@ -1026,8 +1026,9 @@ namespace cubmethod
 	  // path's server-side EXECUTE check. Enforce EXECUTE here, at the caller's compile time,
 	  // the same way jsp_find_stored_procedure (DB_AUTH_EXECUTE) does for the CALL path. The
 	  // routine's owner always passes (owns AU_EXECUTE), so self and same-package references
-	  // are naturally exempt. Java SPs are left to the runtime server check (handled above).
-	  if (!au_is_dba_group_member (Au_user) && au_check_procedure_authorization (routine_mop) != NO_ERROR)
+	  // are naturally exempt; a package member defers to its package's grant. Java SPs are left
+	  // to the runtime server check (handled above).
+	  if (jsp_check_execute_authorization (routine_mop, DB_AUTH_EXECUTE) != NO_ERROR)
 	    {
 	      err = er_errid ();
 	      if (err == NO_ERROR)

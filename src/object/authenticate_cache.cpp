@@ -146,8 +146,9 @@ authenticate_cache::update (DB_OBJECT_TYPE obj_type, MOP mop, void *ptr)
       bits = get_cache_bits ((SM_CLASS *) ptr);
       owner = sm_class->owner;
     }
-  else if (obj_type == DB_OBJECT_PROCEDURE)
+  else if (obj_type == DB_OBJECT_PROCEDURE || obj_type == DB_OBJECT_PACKAGE)
     {
+      // a package shares the same authorization cache and grant machinery as a procedure
       bits = get_procedure_cache_bits (mop);
       owner = (MOP) ptr;
     }

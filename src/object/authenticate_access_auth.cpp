@@ -174,7 +174,8 @@ au_auth_accessor::set_new_auth (DB_OBJECT_TYPE obj_type, MOP au_obj, MOP grantor
 	  return er_errid ();
 	}
 
-      inst_mop = jsp_find_stored_procedure (unique_name, DB_AUTH_NONE);
+      inst_mop = (obj_type == DB_OBJECT_PACKAGE)
+	? jsp_find_package (unique_name, DB_AUTH_NONE) : jsp_find_stored_procedure (unique_name, DB_AUTH_NONE);
       if (inst_mop == NULL)
 	{
 	  assert (er_errid () != NO_ERROR);
@@ -258,6 +259,18 @@ au_auth_accessor::get_new_auth (DB_OBJECT_TYPE obj_type, MOP grantor, MOP user, 
 
       sprintf (obj_fetch_query, sql_query, "SELECT [sp] FROM " CT_STORED_PROC_NAME "[sp] WHERE [unique_name] = ?");
       break;
+    case DB_OBJECT_PACKAGE:
+      sp_unique_name[0] = '\0';
+      if (jsp_get_unique_name (obj_mop, sp_unique_name, DB_MAX_IDENTIFIER_LENGTH) == NULL)
+	{
+	  assert (false);
+	  error = ER_UNEXPECTED;
+	  er_set (ER_ERROR_SEVERITY, ARG_FILE_LINE, error, 1, "Cannot get package name of mop.");
+	  goto exit;
+	}
+
+      sprintf (obj_fetch_query, sql_query, "SELECT [pkg] FROM " CT_PACKAGE_NAME "[pkg] WHERE [unique_name] = ?");
+      break;
     default:
       assert (false);
       error = ER_UNEXPECTED;
@@ -318,6 +331,7 @@ au_auth_accessor::get_new_auth (DB_OBJECT_TYPE obj_type, MOP grantor, MOP user, 
       db_make_string (&val[INDEX_FOR_OBJECT_NAME], class_unique_name);
       break;
     case DB_OBJECT_PROCEDURE:
+    case DB_OBJECT_PACKAGE:
       db_make_string (&val[INDEX_FOR_OBJECT_NAME], sp_unique_name);
       break;
     default:

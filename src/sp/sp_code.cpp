@@ -29,6 +29,7 @@
 
 #include "dbtype.h"
 #include "heap_file.h"
+#include "log_impl.h"
 #include "object_representation_sr.h"
 #include "oid.h"
 #include "schema_system_catalog_constants.h"
@@ -407,7 +408,10 @@ sp_find_oid_by_string_attr (THREAD_ENTRY *thread_p, const OID *class_oid, const 
     }
 
   HEAP_SCANCACHE scan_cache;
-  if (heap_scancache_start (thread_p, &scan_cache, &hfid, class_oid, true, NULL) != NO_ERROR)
+  // use the transaction's MVCC snapshot so a CREATE OR REPLACE'd routine is seen at its current
+  // (committed) version; a NULL snapshot may return a stale version of the code record
+  MVCC_SNAPSHOT *mvcc_snapshot = logtb_get_mvcc_snapshot (thread_p);
+  if (heap_scancache_start (thread_p, &scan_cache, &hfid, class_oid, true, mvcc_snapshot) != NO_ERROR)
     {
       return ER_FAILED;
     }

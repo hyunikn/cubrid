@@ -566,6 +566,7 @@ public class TypeChecker extends AstVisitor<Type> {
     public Type visitExprGlobalFuncCall(ExprGlobalFuncCall node) {
         assert node.decl != null;
         checkRoutineCall(node.decl, node.args.nodes);
+        typeCheckOmittedDefaults(node.decl, node.args.nodes.size());
         dependencies.add(new Dependency(Dependency.OBJ_TYPE_FUNCTION, node.name, spOwner));
         return node.decl.retTypeSpec.type;
     }
@@ -1244,6 +1245,7 @@ public class TypeChecker extends AstVisitor<Type> {
     public Type visitStmtGlobalProcCall(StmtGlobalProcCall node) {
         assert node.decl != null;
         checkRoutineCall(node.decl, node.args.nodes);
+        typeCheckOmittedDefaults(node.decl, node.args.nodes.size());
         dependencies.add(new Dependency(Dependency.OBJ_TYPE_PROCEDURE, node.name, spOwner));
         return null;
     }
@@ -1496,6 +1498,20 @@ public class TypeChecker extends AstVisitor<Type> {
 
         sb.append(")");
         return sb.toString();
+    }
+
+    // Type-check the default values of the trailing parameters that the call omits, so a direct
+    // (global) call which fills them in gets proper coercions. Local routines' defaults are already
+    // type-checked when their declarations are visited, but a global call's parameter list is built
+    // from the server's answer and its defaults are parsed lazily, so they must be checked here.
+    private void typeCheckOmittedDefaults(DeclRoutine decl, int argCnt) {
+        int paramCnt = decl.paramList.nodes.size();
+        for (int i = argCnt; i < paramCnt; i++) {
+            DeclParam dp = decl.paramList.nodes.get(i);
+            if (dp instanceof DeclParamIn && ((DeclParamIn) dp).hasDefault()) {
+                visit(dp);
+            }
+        }
     }
 
     private void checkRoutineCall(DeclRoutine decl, List<Expr> args) {

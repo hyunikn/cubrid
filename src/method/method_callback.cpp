@@ -1022,6 +1022,21 @@ namespace cubmethod
 
       if (lang == SP_LANG_PLCSQL)
 	{
+	  // A direct call compiles the caller's Java against this routine, bypassing the SQL CALL
+	  // path's server-side EXECUTE check. Enforce EXECUTE here, at the caller's compile time,
+	  // the same way jsp_find_stored_procedure (DB_AUTH_EXECUTE) does for the CALL path. The
+	  // routine's owner always passes (owns AU_EXECUTE), so self and same-package references
+	  // are naturally exempt. Java SPs are left to the runtime server check (handled above).
+	  if (!au_is_dba_group_member (Au_user) && au_check_procedure_authorization (routine_mop) != NO_ERROR)
+	    {
+	      err = er_errid ();
+	      if (err == NO_ERROR)
+		{
+		  err = ER_FAILED;
+		}
+	      goto exit;
+	    }
+
 	  DB_VALUE target_class_val;
 	  if (db_get (routine_mop, SP_ATTR_TARGET_CLASS, &target_class_val) == NO_ERROR)
 	    {

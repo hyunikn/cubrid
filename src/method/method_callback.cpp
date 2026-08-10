@@ -139,6 +139,9 @@ namespace cubmethod
       case METHOD_CALLBACK_CHANGE_RIGHTS:
 	error = change_rights (unpacker);
 	break;
+      case METHOD_CALLBACK_CHECK_EXECUTE_AUTH:
+	error = check_execute_auth (unpacker);
+	break;
       default:
 	assert (false);
 	error = ER_FAILED;
@@ -1048,6 +1051,20 @@ namespace cubmethod
 		}
 	      pr_clear_value (&target_class_val);
 	    }
+
+	  // canonical unique_name of the resolved routine; the caller's generated code carries it
+	  // so the runtime EXECUTE check can re-resolve the exact same routine without repeating the
+	  // <user>.<name> vs <package>.<name> disambiguation done here at compile time.
+	  DB_VALUE unique_name_val;
+	  if (db_get (routine_mop, SP_ATTR_UNIQUE_NAME, &unique_name_val) == NO_ERROR)
+	    {
+	      const char *un = db_get_string (&unique_name_val);
+	      if (un != NULL)
+		{
+		  res.unique_name.assign (un);
+		}
+	      pr_clear_value (&unique_name_val);
+	    }
 	}
     }
 
@@ -1460,6 +1477,53 @@ exit:
 	return xs_pack_and_queue (NO_ERROR, status, compile_id, ocode);
       }
     return xs_pack_and_queue (NO_ERROR, status);
+  }
+
+  int
+  callback_handler::check_execute_auth (packing_unpacker &unpacker)
+  {
+    // Runtime EXECUTE check for a directly-called PL/CSQL routine/package member. This mirrors the
+    // compile-time check in get_user_defined_routine_info, re-evaluated here at run time so that a
+    // grant revoked after the caller was compiled takes effect. Au_user is the definer (pushed via
+    // METHOD_CALLBACK_CHANGE_RIGHTS), which is the correct principal for a definer's-rights routine.
+    std::string unique_name;
+    unpacker.unpack_all (unique_name);
+
+    int auth_error = NO_ERROR;
+    int save;
+
+    // Disable authorization while resolving and checking, exactly as the compile-time counterpart
+    // (get_user_defined_routine_info) does. This only permits the catalog reads the check needs
+    // (e.g. the routine/package owner); the EXECUTE decision itself is still evaluated against the
+    // current principal (Au_user, the definer) by jsp_check_execute_authorization.
+    AU_SAVE_AND_DISABLE (save);
+
+    // resolve without an EXECUTE check (DB_AUTH_NONE), then check explicitly so the exact same
+    // routine that the caller was compiled against is re-evaluated by its canonical unique_name.
+    MOP routine_mop = jsp_find_stored_procedure (unique_name.c_str (), DB_AUTH_NONE);
+    if (routine_mop == NULL)
+      {
+	// dropped between the caller's compilation and this execution
+	auth_error = er_errid ();
+	if (auth_error == NO_ERROR)
+	  {
+	    auth_error = ER_SP_NOT_EXIST;
+	  }
+      }
+    else if (jsp_check_execute_authorization (routine_mop, DB_AUTH_EXECUTE) != NO_ERROR)
+      {
+	auth_error = er_errid ();
+	if (auth_error == NO_ERROR)
+	  {
+	    auth_error = ER_FAILED;
+	  }
+      }
+
+    AU_RESTORE (save);
+
+    // the verdict travels as the single leading int of the response block, which the PL server's
+    // generated code reads back as the check result (0 = allowed, otherwise the auth error code).
+    return xs_pack_and_queue (auth_error);
   }
 
 //////////////////////////////////////////////////////////////////////////

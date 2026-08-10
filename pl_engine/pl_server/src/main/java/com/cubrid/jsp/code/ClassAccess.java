@@ -136,6 +136,32 @@ public class ClassAccess {
         return code;
     }
 
+    // Runtime EXECUTE authorization check for a directly-called PL/CSQL routine/package member.
+    // The check is performed on the client (CAS) side, where Au_user is the definer during
+    // execution, via the executor's callback loop (same channel as the runtime code fetch).
+    // Returns 0 when execution is authorized, or a nonzero CUBRID error code otherwise.
+    public static int checkExecuteAuth(String uniqueName) {
+        try {
+            CUBRIDPacker packer = new CUBRIDPacker(ByteBuffer.allocate(1024));
+            // the executor's callback loop reads the request code from the payload
+            packer.packInt(RequestCode.REQUEST_CHECK_EXECUTE_AUTH);
+            packer.packString(uniqueName);
+            Context.getCurrentExecuteThread().sendCommand(packer.getBuffer());
+
+            ByteBuffer responseBuffer = Context.getCurrentExecuteThread().receiveBuffer();
+            CUBRIDUnpacker unpacker = new CUBRIDUnpacker(responseBuffer);
+
+            Header header = new Header(unpacker);
+            ByteBuffer payload = unpacker.unpackBuffer();
+            unpacker.setBuffer(payload);
+
+            return unpacker.unpackInt();
+        } catch (Exception e) {
+            Server.log(e);
+            return -1; // treat a transport failure as "not authorized"
+        }
+    }
+
     // ======================
     // Private
     // ======================

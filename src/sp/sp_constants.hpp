@@ -414,7 +414,10 @@ enum METHOD_CALLBACK_RESPONSE
 
   // CLASS ACCESS
   METHOD_CALLBACK_GET_CODE_ATTR = 201,
-  METHOD_CALLBACK_GET_CODE_BY_NAME = 202
+  METHOD_CALLBACK_GET_CODE_BY_NAME = 202,
+
+  // runtime EXECUTE authorization check for a directly-called PL/CSQL routine/package member
+  METHOD_CALLBACK_CHECK_EXECUTE_AUTH = 203
 };
 
 // result of looking up object code by (generated) class name (shared by the CAS handler that

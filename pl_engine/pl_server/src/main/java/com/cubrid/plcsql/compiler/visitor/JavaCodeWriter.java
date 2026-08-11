@@ -107,6 +107,17 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
         };
     }
 
+    // Clears the runtime EXECUTE-check cache. Emitted at the entry of each top-level static method
+    // (the SP's method and every package member), so the cache lives for a single activation of the
+    // routine: a grant change is picked up on the next call. Local routines do not clear it (their
+    // caller's activation still owns the cache). Empty when the unit has no direct calls.
+    private Object getAuthFlagsClear() {
+        if (authFlagIndex.isEmpty()) {
+            return "";
+        }
+        return new String[] {"java.util.Arrays.fill(authFlags, false);"};
+    }
+
     // Statements guarding a direct call site: on first reach, perform the runtime EXECUTE check and
     // remember the (positive) verdict in authFlags. Returns "" for a target without a unique_name
     // (e.g. a Java SP, which keeps the server-side CALL check) so no guard is emitted.
@@ -308,6 +319,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                 "  public static %'RETURN-TYPE'% %'METHOD-NAME'%(",
                 "      %'+PARAMETERS'%",
                 "    ) throws Exception {",
+                "    %'+AUTH-CLEAR'%",
                 "    try {",
                 "      %'+MAIN-USER-CODE'%",
                 // exceptions that escaped from the exception handlers of the body
@@ -434,6 +446,8 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                 node.connectionRequired ? strGetConn : "",
                 "%'+AUTH-FLAGS'%",
                 getAuthFlagsDecl(),
+                "%'+AUTH-CLEAR'%",
+                getAuthFlagsClear(),
                 "%'+RECORD-DEFS'%",
                 recordDefs,
                 "%'+RECORD-ASSIGN-FUNCS'%",
@@ -449,6 +463,7 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                 "%'MODIFIER'%%'RETURN-TYPE'% %'METHOD-NAME'%(",
                 "    %'+PARAMETERS'%",
                 "  ) throws Exception {",
+                "  %'+AUTH-CLEAR'%",
                 "  %'+NULLIFY-OUT-PARAMETERS'%",
                 "  %'+DECL-CLASS'%",
                 "  %'+BODY'%",
@@ -523,6 +538,8 @@ public class JavaCodeWriter extends AstVisitor<JavaCodeWriter.CodeToResolve> {
                             tmplDeclRoutine,
                             "%'MODIFIER'%",
                             saved ? "public static " : "",
+                            "%'+AUTH-CLEAR'%",
+                            saved ? getAuthFlagsClear() : "",
                             "%'RETURN-TYPE'%",
                             node.retTypeSpec == null
                                     ? "void"

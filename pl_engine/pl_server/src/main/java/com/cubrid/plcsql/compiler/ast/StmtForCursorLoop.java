@@ -45,6 +45,11 @@ public class StmtForCursorLoop extends StmtLoop implements SqlUse {
     }
 
     @Override
+    public boolean isReachableFromLoop() {
+        return this.reachableFromLoop;
+    }
+
+    @Override
     public void markAsReachableFromLoop() {
         this.reachableFromLoop = true;
     }

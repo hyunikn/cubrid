@@ -46,6 +46,11 @@ public class StmtForStaticSqlLoop extends StmtForSqlLoop implements SqlUse {
     }
 
     @Override
+    public boolean isReachableFromLoop() {
+        return this.reachableFromLoop;
+    }
+
+    @Override
     public void markAsReachableFromLoop() {
         this.reachableFromLoop = true;
     }

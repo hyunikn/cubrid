@@ -44,7 +44,6 @@ import com.cubrid.plcsql.compiler.SymbolStack;
 import com.cubrid.plcsql.compiler.ast.*;
 import com.cubrid.plcsql.compiler.ast.ExprFloat;
 import com.cubrid.plcsql.compiler.ast.ExprUint;
-import com.cubrid.plcsql.compiler.ast.loopOpt.SqlUse;
 import com.cubrid.plcsql.compiler.error.SemanticError;
 import com.cubrid.plcsql.compiler.serverapi.ServerAPI;
 import com.cubrid.plcsql.compiler.serverapi.SqlSemantics;
@@ -67,13 +66,11 @@ public class TypeChecker extends AstVisitor<Type> {
             InstanceStore iStore,
             SymbolStack symbolStack,
             Set<Dependency> dependencies,
-            String spOwner,
-            Set<SqlUse> sqlUsesInRecursiveCalls) {
+            String spOwner) {
         this.iStore = iStore;
         this.symbolStack = symbolStack;
         this.dependencies.addAll(dependencies);
         this.spOwner = spOwner;
-        this.sqlUsesInRecursiveCalls = sqlUsesInRecursiveCalls;
     }
 
     @Override
@@ -805,10 +802,11 @@ public class TypeChecker extends AstVisitor<Type> {
         checkRoutineCall(node.decl, node.args.nodes);
 
         // collecting sql uses in recursive calls is not related to type checking
-        // it would be better if it was done in another step between ParseTreeConverter and TypeChecking.
-        if (routineDefNestLevel == 1) {
+        // it would be better if it was done in another step between ParseTreeConverter and
+        // TypeChecking.
+        if (node.decl.sqlUsesOfTopLevel != null) {
             Stack<DeclRoutine> calls = new Stack<>();
-            node.decl.visitToFindRecursiveCalls(sqlUsesInRecursiveCalls, calls);
+            node.decl.visitToFindRecursiveCalls(calls);
             assert calls.size() == 0;
         }
 
@@ -1264,11 +1262,16 @@ public class TypeChecker extends AstVisitor<Type> {
     @Override
     public Type visitStmtLocalProcCall(StmtLocalProcCall node) {
         checkRoutineCall(node.decl, node.args.nodes);
-        if (routineDefNestLevel == 1) {
+
+        // collecting sql uses in recursive calls is not related to type checking
+        // it would be better if it was done in another step between ParseTreeConverter and
+        // TypeChecking.
+        if (node.decl.sqlUsesOfTopLevel != null) {
             Stack<DeclRoutine> calls = new Stack<>();
-            node.decl.visitToFindRecursiveCalls(sqlUsesInRecursiveCalls, calls);
+            node.decl.visitToFindRecursiveCalls(calls);
             assert calls.size() == 0;
         }
+
         return null;
     }
 
@@ -1402,13 +1405,10 @@ public class TypeChecker extends AstVisitor<Type> {
 
     private static final Type[] TYPE_ARRAY_DUMMY = new Type[0];
 
-    private int routineDefNestLevel;
-
     private InstanceStore iStore;
     private SymbolStack symbolStack;
     private ParseTreeConverter ptConv;
     private String spOwner;
-    private Set<SqlUse> sqlUsesInRecursiveCalls;
 
     private List<Type> caseComparedTypes;
 
@@ -1425,8 +1425,6 @@ public class TypeChecker extends AstVisitor<Type> {
     }
 
     private Type visitDeclRoutine(DeclRoutine node) {
-
-        routineDefNestLevel++;
 
         visitNodeList(node.paramList);
         if (node.isPublic) {
@@ -1466,8 +1464,6 @@ public class TypeChecker extends AstVisitor<Type> {
         if (node.body != null) {
             visitBody(node.body);
         }
-
-        routineDefNestLevel--;
 
         return null;
     }

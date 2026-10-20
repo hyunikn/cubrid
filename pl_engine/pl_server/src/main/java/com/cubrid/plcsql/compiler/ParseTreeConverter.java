@@ -64,6 +64,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 import java.util.TreeSet;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -251,7 +252,9 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                                     + " must be updatable because it is to an OUT parameter");
                 }
 
-                gpc.decl = new DeclProc(null, ps.name, null, null, true, paramList, ps.directive);
+                gpc.decl =
+                        new DeclProc(
+                                null, ps.name, null, null, null, true, paramList, ps.directive);
 
                 gpc.usesDefaultArg = (gpc.args.nodes.size() < paramList.nodes.size());
                 gpc.targetClass = ps.targetClass;
@@ -317,6 +320,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                         new DeclFunc(
                                 null,
                                 fs.name,
+                                null,
                                 null,
                                 null,
                                 true,
@@ -1250,9 +1254,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
                 ExprLocalFuncCall ret =
                         new ExprLocalFuncCall(ctx, name, args, symbolStack.getCurrentScope(), decl);
-                if (decl.isNotContainedInLoop()) {
-                    addToLocalRoutineCalls(ret);
-                }
+                addToLocalRoutineCalls(ret);
                 return ret;
             }
         }
@@ -1697,10 +1699,16 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                     isFunction ? symbolStack.getDeclFunc(name) : symbolStack.getDeclProc(name);
             assert ret != null; // by the previsit
 
+            routineLoopOptimizablesStack.push(ret.loopOptimizables);
+            if (ret.sqlUsesOfTopLevel != null) {
+                sqlUsesOfTopLevelRoutine = ret.sqlUsesOfTopLevel;
+            }
+            /*
             StmtLoop.LoopOptimizables routineLoopOptimizables = ret.loopOptimizables;
             if (routineLoopOptimizables != null) {
                 loopOptimizables = routineLoopOptimizables;
             }
+             */
 
             final int DECL_TOP_LEVEL = SymbolStack.LEVEL_MAIN + (topLevelStmt == CREATE_SP ? 0 : 1);
             int scopeLevel = symbolStack.getCurrentScope().level;
@@ -1737,11 +1745,17 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
             symbolStack.popSymbolTable();
 
+            routineLoopOptimizablesStack.pop();
+            if (ret.sqlUsesOfTopLevel != null) {
+                sqlUsesOfTopLevelRoutine = null;
+            }
+            /*
             if (routineLoopOptimizables != null) {
-                // It is not null because loopOptimizables was null: see the previsitRoutine().
+                // It is not null because loopOptimizables was null: see the previsitRoutine_decl().
                 // Restore the null.
                 loopOptimizables = null;
             }
+             */
 
             ret.decls = decls;
             ret.body = body;
@@ -2077,6 +2091,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                                     null, // ctx
                                     name,
                                     null, // comment
+                                    null, // sqlUsesOfTopLevel
                                     null, // loopOptimizables
                                     true,
                                     EMPTY_PARAMS,
@@ -2949,9 +2964,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
             StmtLocalProcCall ret =
                     new StmtLocalProcCall(ctx, name, args, symbolStack.getCurrentScope(), decl);
-            if (decl.isNotContainedInLoop()) {
-                addToLocalRoutineCalls(ret);
-            }
+            addToLocalRoutineCalls(ret);
             return ret;
         }
     }
@@ -2984,11 +2997,9 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
         StmtExecImme ret =
                 new StmtExecImme(
                         ctx, level, dynSql, intoTargetList, usedExprList, getSqlSerialNo());
-        if (loopOptimizables != null) {
-            if (dynSql instanceof ExprStr) {
-                // only when it is a fixed string.
-                loopOptimizables.sqlUses.add(ret);
-            }
+        if (dynSql instanceof ExprStr) {
+            // only when it is a fixed string. optimization for a big cases
+            addToSqlUses(ret);
         }
         return ret;
     }
@@ -3209,6 +3220,8 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
             new LinkedHashMap<>();
 
     private StmtLoop.LoopOptimizables loopOptimizables = null;
+    private Set<SqlUse> sqlUsesOfTopLevelRoutine = null;
+    private Stack<StmtLoop.LoopOptimizables> routineLoopOptimizablesStack = new Stack<>();
 
     private String spName;
     private boolean isSpFunc;
@@ -3357,12 +3370,23 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
         int scopeLevel = symbolStack.getCurrentScope().level;
 
+        StmtLoop.LoopOptimizables routineLoopOptimizables = new StmtLoop.LoopOptimizables();
+        routineLoopOptimizablesStack.push(routineLoopOptimizables);
+        if (routineLoopOptimizablesStack.size() == 1) {
+            assert scopeLevel == DECL_TOP_LEVEL;
+            sqlUsesOfTopLevelRoutine = new HashSet<>();
+        } else {
+            assert scopeLevel > DECL_TOP_LEVEL;
+        }
+
+        /*
         StmtLoop.LoopOptimizables routineLoopOptimizables = null;
         if (scopeLevel > DECL_TOP_LEVEL && loopOptimizables == null) {
             // This declaration part is not included in a loop.
             // Prepare my own loop optimizables bag.
             loopOptimizables = routineLoopOptimizables = new StmtLoop.LoopOptimizables();
         }
+         */
 
         previsiting = true;
         try {
@@ -3451,6 +3475,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                                 ctx,
                                 name,
                                 comment,
+                                scopeLevel == DECL_TOP_LEVEL ? sqlUsesOfTopLevelRoutine : null,
                                 routineLoopOptimizables,
                                 isPublic,
                                 paramList,
@@ -3472,6 +3497,7 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
                                 ctx,
                                 name,
                                 comment,
+                                scopeLevel == DECL_TOP_LEVEL ? sqlUsesOfTopLevelRoutine : null,
                                 routineLoopOptimizables,
                                 isPublic,
                                 paramList,
@@ -3483,10 +3509,18 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
             }
         } finally {
             previsiting = false;
+
+            routineLoopOptimizablesStack.pop();
+            if (routineLoopOptimizablesStack.size() == 0) {
+                sqlUsesOfTopLevelRoutine = null;
+            }
+
+            /*
             if (routineLoopOptimizables != null) {
                 // it is not null because loopOptimizables was null; restore the null
                 loopOptimizables = null;
             }
+             */
         }
     }
 
@@ -4031,14 +4065,24 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
     private void addToSqlUses(SqlUse node) {
 
-        if (loopOptimizables != null) {
+        if (routineDefNestLevel > 1 && !node.usingRef()) {
+            // this sql-using construct resides in a routine definition, in which case
+            // it must use reference of Statement regardless of its default setting of usingRef
+            // because, otheriwse Javac compile error occurs
+            node.setToUseRef();
+        }
 
-            if (routineDefNestLevel > 1 && !node.usingRef()) {
-                // this sql-using construct resides in a routine definition, in which case
-                // it must use reference of Statement regardless of its default setting of usingRef
-                node.setToUseRef();
-            }
+        if (loopOptimizables != null) {
             loopOptimizables.sqlUses.add(node);
+        }
+
+        StmtLoop.LoopOptimizables routineLoopOptimizables = routineLoopOptimizablesStack.peek();
+        if (routineLoopOptimizables != null) {
+            routineLoopOptimizables.sqlUses.add(node);
+        }
+
+        if (sqlUsesOfTopLevelRoutine != null) {
+            sqlUsesOfTopLevelRoutine.add(node);
         }
     }
 
@@ -4046,6 +4090,11 @@ public class ParseTreeConverter extends PlcParserBaseVisitor<AstNode> {
 
         if (loopOptimizables != null) {
             loopOptimizables.localRoutineCalls.add(node);
+        }
+
+        StmtLoop.LoopOptimizables routineLoopOptimizables = routineLoopOptimizablesStack.peek();
+        if (routineLoopOptimizables != null) {
+            routineLoopOptimizables.localRoutineCalls.add(node);
         }
     }
 }

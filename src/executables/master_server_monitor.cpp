@@ -111,6 +111,7 @@ server_monitor::register_server_entry (int pid, const std::string &exec_path, co
     {
       entry->second.set_pid (pid);
       entry->second.set_need_revive (false);
+      entry->second.set_revive_try_count (0);
       entry->second.set_last_revived_time (std::chrono::steady_clock::now ());
       er_log_debug (ARG_FILE_LINE,
 		    "[Server Monitor] [%s] Server entry has been registered. (pid : %d)",
@@ -153,6 +154,9 @@ server_monitor::revive_server (const std::string &server_name)
   // Unacceptable revive time difference is set to be 120 seconds
   // as the timediff of server restart mechanism of heartbeat.
   constexpr int SERVER_MONITOR_UNACCEPTABLE_REVIVE_TIMEDIFF_IN_SECS = 120;
+  // A server that cannot be started (e.g. the executable is missing) is retried at this interval up to this many times.
+  constexpr int SERVER_MONITOR_MAX_REVIVE_TRY_COUNT = 5;
+  constexpr int SERVER_MONITOR_REVIVE_RETRY_INTERVAL_IN_SECS = 1;
   std::chrono::steady_clock::time_point tv;
   int out_pid;
 
@@ -173,13 +177,27 @@ server_monitor::revive_server (const std::string &server_name)
       // 1. preventing repeated creation of core files.
       // 2. The service cannot be recovered even if revived if the server abnormally terminates again within a short time.
 
-      // TODO: Consider retry count for repeated failure case, and give up reviving the server after several retries.
       // TODO: The timediff value continues to increase if REVIVE_SERVER handling is repeated. Thus, the if condition will always be
       // true after the first evaluation. Therefore, evaluating the timediff only once when producing the REVIVE_SERVER job is needed.
       // (Currently, it is impossible since last_revived_time is stored in server_entry, which is not synchronized structure between monitor and main thread.)
 
       if (!revived_before || timediff > SERVER_MONITOR_UNACCEPTABLE_REVIVE_TIMEDIFF_IN_SECS)
 	{
+	  if (entry->second.get_revive_try_count () >= SERVER_MONITOR_MAX_REVIVE_TRY_COUNT)
+	    {
+	      er_log_debug (ARG_FILE_LINE,
+			    "[Server Monitor] [%s] Failed to revive server %d times. It will no longer be revived automatically.",
+			    entry->first.c_str(), SERVER_MONITOR_MAX_REVIVE_TRY_COUNT);
+	      m_server_entry_map.erase (entry);
+	      return;
+	    }
+
+	  if (entry->second.get_revive_try_count () > 0)
+	    {
+	      std::this_thread::sleep_for (std::chrono::seconds (SERVER_MONITOR_REVIVE_RETRY_INTERVAL_IN_SECS));
+	    }
+	  entry->second.set_revive_try_count (entry->second.get_revive_try_count () + 1);
+
 	  out_pid = try_revive_server (entry->second.get_exec_path(), entry->second.get_argv());
 	  if (out_pid == -1)
 	    {
@@ -270,7 +288,11 @@ server_monitor::try_revive_server (const std::string &exec_path, char *const *ar
     }
   else if (pid == 0)
     {
-      return execv (exec_path.c_str(), argv);
+      (void) execv (exec_path.c_str(), argv);
+
+      // execv returns only on failure. The child is a copy of cub_master that has only this thread left.
+      // If it returned to the caller, it would keep running the monitor loop and fork again on every retry.
+      _exit (1);
     }
   else
     {
@@ -403,6 +425,7 @@ server_entry (int pid, const std::string &exec_path, const std::string &args,
   : m_pid {pid}
   , m_exec_path {exec_path}
   , m_need_revive {false}
+  , m_revive_try_count {0}
   , m_last_revived_time {revive_time}
 {
   if (args.size() > 0)
@@ -447,6 +470,12 @@ server_monitor::server_entry::get_need_revive () const
   return m_need_revive;
 }
 
+int
+server_monitor::server_entry::get_revive_try_count () const
+{
+  return m_revive_try_count;
+}
+
 std::chrono::steady_clock::time_point
 server_monitor::server_entry::get_last_revived_time () const
 {
@@ -469,6 +498,12 @@ void
 server_monitor::server_entry::set_need_revive (bool need_revive)
 {
   m_need_revive = need_revive;
+}
+
+void
+server_monitor::server_entry::set_revive_try_count (int revive_try_count)
+{
+  m_revive_try_count = revive_try_count;
 }
 
 void

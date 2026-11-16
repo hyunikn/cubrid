@@ -129,6 +129,7 @@ class server_monitor
 	    {
 	      m_pid = other.m_pid;
 	      m_need_revive = other.m_need_revive;
+	      m_revive_try_count = other.m_revive_try_count;
 	      m_last_revived_time = other.m_last_revived_time;
 	      m_exec_path = other.m_exec_path;
 	      m_argv = std::move (other.m_argv);
@@ -140,11 +141,13 @@ class server_monitor
 	std::string get_exec_path () const;
 	char *const *get_argv () const;
 	bool get_need_revive () const;
+	int get_revive_try_count () const;
 	std::chrono::steady_clock::time_point get_last_revived_time () const;
 
 	void set_pid (int pid);
 	void set_exec_path (const std::string &exec_path);
 	void set_need_revive (bool need_revive);
+	void set_revive_try_count (int revive_try_count);
 	void set_last_revived_time (std::chrono::steady_clock::time_point revive_time);
 
 	void proc_make_arg (const std::string &args);
@@ -154,6 +157,7 @@ class server_monitor
 	std::string m_exec_path;                                      // executable path of server process
 	std::unique_ptr<char *[]> m_argv;                             // arguments of server process
 	volatile bool m_need_revive;                                  // need to be revived by monitoring thread
+	int m_revive_try_count;                                       // revive attempts since the server last registered
 	std::chrono::steady_clock::time_point m_last_revived_time;    // last revived time
     };
 
